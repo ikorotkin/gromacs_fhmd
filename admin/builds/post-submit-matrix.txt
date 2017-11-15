@@ -1,0 +1,49 @@
+# Comment line(s) preceding each configuration document the main
+# intent behind that configuration, so that we can correctly judge
+# whether to preserve that during maintenance decisions.
+#
+# Other configurations might coincidentally test such configurations
+# (e.g. because they are the current default), but it is appropriate
+# to intend to teach each feature (or a feature combination) exactly
+# once, and for the intent to be reflected precisely in the
+# configuration syntax, so that the configurations are stable even
+# if the defaults change in future.
+
+# Test the mdrun-only build
+# TODO In combination with gmx from another build, arrange to run regressiontests
+clang-3.7 double mpi no-openmp fftpack mdrun-only
+
+# Test MPMD PME with thread-MPI
+# TODO Add double to this configuration if/when we stablize the essentialdynamics tests
+gcc-5 npme=1 nranks=2 no-openmp fftpack simd=avx_128_fma release
+
+# Test non-default GMX_PREFER_STATIC_LIBS behavior
+# TODO enable this
+# msvc-2015 double no-threadmpi no-prefer-static-libs release
+
+# Test behaviour when dlopen is not present
+# TODO enable this
+# icc-16.0 no-dlopen no-threadmpi double mkl release
+
+# Test SSE4.1 SIMD
+# Test single-rank GPU
+gcc-4.8 nranks=1 gpu cuda-7.5 simd=sse4.1
+
+# Test MPMD PME with library MPI
+clang-3.4 npme=1 nranks=2 mpi
+
+# Test non-default use of mdrun -gpu_id
+# Test SSE2 SIMD
+gcc-4.8 gpu npme=1 nranks=2 gpu_id=2 cuda-7.5 simd=sse2 release
+
+# TODO
+# Re-enable Phi build
+# Test without TNG support
+# Test without hwloc support
+# Test with NVML support
+# Test statically linked hwloc support (if/when it can work well)
+# Test 3D DD (2D is partially covered in regressiontests)
+# Test own-fftw build (from local copy of the file)
+# Test mdrun -tunepme (e.g. with relaxed tolerances, for now)
+# Consider testing of other CMake option paths
+# Consider adding our ARM dev boards as slaves to improve cross-platform portability testing.
