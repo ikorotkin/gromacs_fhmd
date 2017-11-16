@@ -124,6 +124,11 @@
 #include "corewrap.h"
 #endif
 
+/*
+ * FHMD includes
+ */
+#include "gromacs/fhmdlib/init.h"
+
 using gmx::SimulationSignaller;
 
 /*! \brief Check whether bonded interactions are missing, if appropriate
@@ -794,6 +799,11 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                           "but we are proceeding anyway!\n");
         }
     }
+
+    /*
+     * FHMD Initialization
+     */
+    int is_fhmd = fhmd_init(cr);
 
     /* and stop now if we should */
     bLastStep = (bLastStep || (ir->nsteps >= 0 && step_rel > ir->nsteps));
