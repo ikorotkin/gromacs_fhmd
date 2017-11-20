@@ -101,6 +101,13 @@ int fhmd_init(matrix box, t_commrec *cr, FHMD *fh)
         fflush(stdout);
         fclose(fw);
 
+        /* Open files for writing */
+
+
+        /* Create FH grid */
+
+
+
     } // if(MASTER(cr))
 
     /* Broadcast parameters to all threads */
@@ -116,7 +123,7 @@ int fhmd_init(matrix box, t_commrec *cr, FHMD *fh)
 
     if(fh->arr == NULL)
     {
-        printf(MAKE_RED "\nFHMD: ERROR: Out of memory (array allocator)\n" RESET_COLOR "\n");
+        if(MASTER(cr)) printf(MAKE_RED "\nFHMD: ERROR: Out of memory (array allocator)\n" RESET_COLOR "\n");
         exit(3);
     }
 

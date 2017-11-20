@@ -78,6 +78,12 @@
 #include "gromacs/utility/gmxomp.h"
 #include "gromacs/utility/smalloc.h"
 
+/*
+ * FHMD includes
+ */
+#include "gromacs/fhmdlib/data_structures.h"
+#include "gromacs/fhmdlib/new_update.h"
+
 /*For debugging, start at v(-dt/2) for velolcity verlet -- uncomment next line */
 /*#define STARTFROMDT2*/
 
@@ -1716,6 +1722,157 @@ void update_coords(FILE             *fplog,
                     break;
                 case (eiVV):
                 case (eiVVAK):
+                    alpha = 1.0 + DIM/((double)inputrec->opts.nrdf[0]); /* assuming barostat coupled to group 0. */
+                    switch (UpdatePart)
+                    {
+                        case etrtVELOCITY1:
+                        case etrtVELOCITY2:
+                            do_update_vv_vel(start_th, end_th, dt,
+                                             inputrec->opts.acc, inputrec->opts.nFreeze,
+                                             md->invmass, md->ptype,
+                                             md->cFREEZE, md->cACC,
+                                             state->v, f,
+                                             (bNH || bPR), state->veta, alpha);
+                            break;
+                        case etrtPOSITION:
+                            do_update_vv_pos(start_th, end_th, dt,
+                                             inputrec->opts.nFreeze,
+                                             md->ptype, md->cFREEZE,
+                                             state->x, upd->xp, state->v,
+                                             (bNH || bPR), state->veta);
+                            break;
+                    }
+                    break;
+                default:
+                    gmx_fatal(FARGS, "Don't know how to update coordinates");
+                    break;
+            }
+        }
+        GMX_CATCH_ALL_AND_EXIT_WITH_FATAL_ERROR;
+    }
+
+}
+
+
+void fhmd_update_coords(FILE        *fplog,
+                   gmx_int64_t       step,
+                   t_inputrec       *inputrec,  /* input record and box stuff   */
+                   t_mdatoms        *md,
+                   t_state          *state,
+                   rvec             *f,    /* forces on home particles */
+                   t_fcdata         *fcd,
+                   gmx_ekindata_t   *ekind,
+                   matrix            M,
+                   gmx_update_t     *upd,
+                   int               UpdatePart,
+                   t_commrec        *cr, /* these shouldn't be here -- need to think about it */
+                   gmx_constr_t      constr,
+                   FHMD             *fh)
+{
+    gmx_bool          bNH, bPR, bDoConstr = FALSE;
+    double            dt, alpha;
+    int               start, homenr, nrend;
+    int               nth, th;
+
+    bDoConstr = (NULL != constr);
+
+    /* Running the velocity half does nothing except for velocity verlet */
+    if ((UpdatePart == etrtVELOCITY1 || UpdatePart == etrtVELOCITY2) &&
+        !EI_VV(inputrec->eI))
+    {
+        gmx_incons("update_coords called for velocity without VV integrator");
+    }
+
+    start  = 0;
+    homenr = md->homenr;
+    nrend  = start+homenr;
+
+    dt   = inputrec->delta_t;
+
+    /* We need to update the NMR restraint history when time averaging is used */
+    if (state->flags & (1<<estDISRE_RM3TAV))
+    {
+        update_disres_history(fcd, &state->hist);
+    }
+    if (state->flags & (1<<estORIRE_DTAV))
+    {
+        update_orires_history(fcd, &state->hist);
+    }
+
+
+    bNH = inputrec->etc == etcNOSEHOOVER;
+    bPR = ((inputrec->epc == epcPARRINELLORAHMAN) || (inputrec->epc == epcMTTK));
+
+    /* ############# START The update of velocities and positions ######### */
+    where();
+    dump_it_all(fplog, "Before update",
+                state->natoms, state->x, upd->xp, state->v, f);
+
+    nth = gmx_omp_nthreads_get(emntUpdate);
+
+#pragma omp parallel for num_threads(nth) schedule(static) private(alpha)
+    for (th = 0; th < nth; th++)
+    {
+        try
+        {
+            int start_th, end_th;
+
+            start_th = start + ((nrend-start)* th   )/nth;
+            end_th   = start + ((nrend-start)*(th+1))/nth;
+
+            switch (inputrec->eI)
+            {
+                case (eiMD):
+                    if (ekind->cosacc.cos_accel == 0)
+                    {
+                        fhmd_do_update_md(start_th, end_th,
+                                          dt, inputrec->nstpcouple,
+                                          ekind->tcstat, state->nosehoover_vxi,
+                                          ekind->bNEMD, ekind->grpstat, inputrec->opts.acc,
+                                          inputrec->opts.nFreeze,
+                                          md->invmass, md->ptype,
+                                          md->cFREEZE, md->cACC, md->cTC,
+                                          state->x, upd->xp, state->v, f, M,
+                                          bNH, bPR, fh);
+                    }
+                    else
+                    {
+                        do_update_visc(start_th, end_th,
+                                       dt, inputrec->nstpcouple,
+                                       ekind->tcstat, state->nosehoover_vxi,
+                                       md->invmass, md->ptype,
+                                       md->cTC, state->x, upd->xp, state->v, f, M,
+                                       state->box,
+                                       ekind->cosacc.cos_accel,
+                                       ekind->cosacc.vcos,
+                                       bNH, bPR);
+                    }
+                    break;
+                case (eiSD1):
+                    /* With constraints, the SD1 update is done in 2 parts */
+                    do_update_sd1(upd->sd,
+                                  start_th, end_th, dt,
+                                  inputrec->opts.acc, inputrec->opts.nFreeze,
+                                  md->invmass, md->ptype,
+                                  md->cFREEZE, md->cACC, md->cTC,
+                                  state->x, upd->xp, state->v, f,
+                                  bDoConstr, TRUE,
+                                  step, inputrec->ld_seed, DOMAINDECOMP(cr) ? cr->dd->gatindex : NULL);
+                    break;
+                case (eiBD):
+                    do_update_bd(start_th, end_th, dt,
+                                 inputrec->opts.nFreeze, md->invmass, md->ptype,
+                                 md->cFREEZE, md->cTC,
+                                 state->x, upd->xp, state->v, f,
+                                 inputrec->bd_fric,
+                                 upd->sd->bd_rf,
+                                 step, inputrec->ld_seed, DOMAINDECOMP(cr) ? cr->dd->gatindex : NULL);
+                    break;
+                case (eiVV):
+                case (eiVVAK):
+                    /* FHMD Error */
+                    if(MASTER(cr)) printf(MAKE_RED "\nFHMD: ERROR: FH-MD coupling doesn't support Velocity Verlet integrator (md-vv)\n" RESET_COLOR "\n");
+                    exit(10);
                     alpha = 1.0 + DIM/((double)inputrec->opts.nrdf[0]); /* assuming barostat coupled to group 0. */
                     switch (UpdatePart)
                     {

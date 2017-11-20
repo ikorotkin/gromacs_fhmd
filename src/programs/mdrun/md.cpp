@@ -129,6 +129,7 @@
  */
 #include "gromacs/fhmdlib/data_structures.h"
 #include "gromacs/fhmdlib/init.h"
+#include "gromacs/fhmdlib/new_update.h"
 
 using gmx::SimulationSignaller;
 
@@ -1448,8 +1449,29 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 copy_rvecn(state->x, cbuf, 0, state->natoms);
             }
 
-            update_coords(fplog, step, ir, mdatoms, state, f, fcd,
-                          ekind, M, upd, etrtPOSITION, cr, constr);
+            if(!is_fhmd)
+            {
+                update_coords(fplog, step, ir, mdatoms, state, f, fcd,
+                              ekind, M, upd, etrtPOSITION, cr, constr);
+            }
+            else /******************** FHMD coupling ********************/
+            {
+
+                /*
+                 * FHMD: Broadcast new FH variables
+                 */
+                if(PAR(cr)) {
+                    gmx_bcast(sizeof(FH_arrays)*fhmd.Ntot, fhmd.arr, cr);
+                }
+
+                /*
+                 * FHMD: Modified update_coords() here
+                 */
+                fhmd_update_coords(fplog, step, ir, mdatoms, state, f, fcd,
+                                   ekind, M, upd, etrtPOSITION, cr, constr, &fhmd);
+
+            }
+
             wallcycle_stop(wcycle, ewcUPDATE);
 
             update_constraints(fplog, step, &dvdl_constr, ir, mdatoms, state,
