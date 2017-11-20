@@ -1,26 +1,100 @@
-/*
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "data_structures.h"
+#include "parser.h"
 
 
-int assign_int_value(int *v, char *line, FILE *fprm) {
+int parse_prm(char const *fname, FHMD *fh)
+{
 
-    fscanf(fprm, "%s", line);   // skip equal delimeter
-    fscanf(fprm, "%s", line);
-    if(sscanf(line, "%d", v) != 1) return 0;
-    else return 1;
+    const char c = ';';     // comment delimiter
+
+    FILE *fprm;
+
+    if((fprm = fopen(fname, "r")) == NULL) return -1;   // file not found
+
+    char line[255];
+    int  ok = 1;
+
+    while(fscanf(fprm, "%s", line) != -1)
+    {
+
+        if(line[0] == c) skip_line(fprm);   // skip comment
+
+        if(!strcmp(line, "S") || !strcmp(line, "s"))
+            ok = assign_double_value(&fh->S, line, fprm);
+        else if(!strcmp(line, "R1"))
+            ok = assign_double_value(&fh->R1, line, fprm);
+        else if(!strcmp(line, "R2"))
+            ok = assign_double_value(&fh->R2, line, fprm);
+        else if(!strcmp(line, "Smin"))
+            ok = assign_double_value(&fh->Smin, line, fprm);
+        else if(!strcmp(line, "Smax"))
+            ok = assign_double_value(&fh->Smax, line, fprm);
+        else if(!strcmp(line, "alpha"))
+            ok = assign_double_value(&fh->alpha, line, fprm);
+        else if(!strcmp(line, "beta"))
+            ok = assign_double_value(&fh->beta, line, fprm);
+        else if(!strcmp(line, "Nx"))
+            ok = assign_int_value(&fh->N.x, line, fprm);
+        else if(!strcmp(line, "Ny"))
+            ok = assign_int_value(&fh->N.y, line, fprm);
+        else if(!strcmp(line, "Nz"))
+            ok = assign_int_value(&fh->N.z, line, fprm);
+        else if(!strcmp(line, "FH_equil"))
+            ok = assign_int_value(&fh->FH_equil, line, fprm);
+        else if(!strcmp(line, "FH_step"))
+            ok = assign_int_value(&fh->FH_step, line, fprm);
+        else if(!strcmp(line, "FH_dens"))
+            ok = assign_double_value(&fh->FH_dens, line, fprm);
+        else if(!strcmp(line, "FH_temp"))
+            ok = assign_double_value(&fh->FH_temp, line, fprm);
+
+        if(!ok) return 0;   // error in prm-file
+
+    }
+
+    fclose(fprm);
+
+    return 1;
 
 }
 
 
-int assign_double_value(double *v, char *line, FILE *fprm) {
-    
+void skip_line(FILE *fprm)
+{
+
+    int ok = 1;
+    char c = '0';
+
+    while((c != '\n') && (ok == 1)) ok = fscanf(fprm, "%c", &c);
+
+}
+
+
+int assign_int_value(int *v, char *line, FILE *fprm)
+{
+
+    int ok = fscanf(fprm, "%s", line);  // skip 'equal' delimiter
+
+    ok = fscanf(fprm, "%s", line);
+
+    if(sscanf(line, "%d", v) != 1) {
+        return 0;
+    } else {
+        return 1;
+    }
+
+}
+
+
+int assign_double_value(double *v, char *line, FILE *fprm)
+{
+
     float f;
-    
-    fscanf(fprm, "%s", line);   // skip equal delimeter
-    fscanf(fprm, "%s", line);
+
+    int ok = fscanf(fprm, "%s", line);  // skip 'equal' delimiter
+
+    ok = fscanf(fprm, "%s", line);
+
     if(sscanf(line, "%f", &f) != 1) {
         return 0;
     } else {
@@ -29,47 +103,3 @@ int assign_double_value(double *v, char *line, FILE *fprm) {
     }
 
 }
-
-
-int parser(char *fname, hmd_global *prm) {
-    
-    const char c = ';';     // comment delimeter
-
-    FILE *fprm;
-
-    if((fprm = fopen("coupling.txt", "r")) == NULL) return 1;
-
-    char line[255];
-    int read_value = 0, v = 0, argon = 0, ok;
-    double d = 0;
-
-    while(fscanf(fprm, "%s", line) != -1)
-    {
-
-        if(line[0] == c) continue;  // skip comment
-        if(line[0] == e) {read_value = 1; continue;}
-
-        if(!strcmp(line, "argon")) ok=assign_int_value(&argon, line, fprm);
-        else if(!strcmp(line, "water")) ok=assign_double_value(&d, line, fprm);
-
-        if(!ok) printf("ERROR");
-
-        printf("line: %s\n", line);
-
-            printf("v=%d\n", argon);
-            printf("w=%g\n", d);
-
-    }
-    
-    return 1;
-    
-}
-
-
-int main(int argc, char **argv) {
-
-    int ok = parser("coupling.prm", prm);
-
-}
-*/
-

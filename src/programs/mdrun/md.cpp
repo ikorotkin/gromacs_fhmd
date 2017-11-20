@@ -127,6 +127,7 @@
 /*
  * FHMD includes
  */
+#include "gromacs/fhmdlib/data_structures.h"
 #include "gromacs/fhmdlib/init.h"
 
 using gmx::SimulationSignaller;
@@ -281,6 +282,10 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
     char              sbuf[STEPSTRSIZE], sbuf2[STEPSTRSIZE];
     int               handled_stop_condition = gmx_stop_cond_none; /* compare to get_stop_condition*/
 
+    /*
+     * FHMD declarations
+     */
+    FHMD fhmd;
 
     /* PME load balancing data for GPU kernels */
     pme_load_balancing_t *pme_loadbal      = NULL;
@@ -803,7 +808,7 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
     /*
      * FHMD Initialization
      */
-    int is_fhmd = fhmd_init(cr);
+    int is_fhmd = fhmd_init(state->box, cr, &fhmd);
 
     /* and stop now if we should */
     bLastStep = (bLastStep || (ir->nsteps >= 0 && step_rel > ir->nsteps));
