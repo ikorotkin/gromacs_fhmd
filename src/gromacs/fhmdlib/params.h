@@ -3,6 +3,8 @@
 
 #define fhmd_version        3.00            /* FHMD model version */
 
+#define FHMD_IND_MAX        1000            /* Maximum dimension of MDFH arrays -- for control purpose only */
+
 /* Color codes */
 #ifndef _MSC_VER
     #define RESET_COLOR     "\e[m"

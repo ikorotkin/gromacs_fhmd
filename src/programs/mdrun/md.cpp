@@ -129,6 +129,7 @@
  */
 #include "gromacs/fhmdlib/data_structures.h"
 #include "gromacs/fhmdlib/init.h"
+#include "gromacs/fhmdlib/coupling.h"
 #include "gromacs/fhmdlib/new_update.h"
 
 using gmx::SimulationSignaller;
@@ -809,7 +810,7 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
     /*
      * FHMD Initialization
      */
-    int is_fhmd = fhmd_init(state->box, cr, &fhmd);
+    int is_fhmd = fhmd_init(state->box, mdatoms->homenr, cr, &fhmd);
 
     /* and stop now if we should */
     bLastStep = (bLastStep || (ir->nsteps >= 0 && step_rel > ir->nsteps));
@@ -1458,10 +1459,17 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
             {
 
                 /*
+                 * FHMD: Update MD variables in the FH cells
+                 */
+                fhmd_update_MD_in_FH(state->x, state->v, mdatoms->massT, mdatoms->homenr, &fhmd);
+
+                /*
                  * FHMD: Broadcast new FH variables
                  */
-                if(PAR(cr)) {
+                if(PAR(cr))
+                {
                     gmx_bcast(sizeof(FH_arrays)*fhmd.Ntot, fhmd.arr, cr);
+                    fhmd_sum_arrays(cr, &fhmd);
                 }
 
                 /*

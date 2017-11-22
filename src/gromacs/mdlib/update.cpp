@@ -1810,6 +1810,13 @@ void fhmd_update_coords(FILE        *fplog,
 
     nth = gmx_omp_nthreads_get(emntUpdate);
 
+    /* FHMD Error */
+    if(nth > 1)
+    {
+        if(MASTER(cr)) printf(MAKE_RED "\nFHMD: ERROR: OpenMP is not supported yet. Use '-ntomp 1' option for 'gmx mdrun'\n" RESET_COLOR "\n");
+        exit(9);
+    }
+
 #pragma omp parallel for num_threads(nth) schedule(static) private(alpha)
     for (th = 0; th < nth; th++)
     {
