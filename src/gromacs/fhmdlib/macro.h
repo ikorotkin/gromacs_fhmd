@@ -3,24 +3,60 @@
 
 #include "data_structures.h"
 
-static int I(int i, int j, int k, FH_VecI N)
+#define NX      fh->N[0]                /* Number of FH cells along X axis */
+#define NY      fh->N[1]                /* Number of FH cells along Y axis */
+#define NZ      fh->N[2]                /* Number of FH cells along Z axis */
+
+#define C       I(ind, fh->N)           /* Point [i][j][k] */
+
+
+#define ASSIGN_IND(ind, i, j, k) \
+    ind[0] = i; \
+    ind[1] = j; \
+    ind[2] = k;
+
+
+static void PBC(dvec xn, const rvec x, const dvec box)
 {
-    if(abs(i) > FHMD_IND_MAX || abs(j) > FHMD_IND_MAX || abs(k) > FHMD_IND_MAX)
+    for(int d = 0; d < DIM; d++)
     {
-        printf(MAKE_RED "\nFHMD: ERROR: FH array indexes overflow: (i, j, k) = (%d, %d, %d)\n" RESET_COLOR "\n", i, j, k);
-        exit(20);
+        xn[d] = x[d];
+
+        if(fabs(xn[d]) > FHMD_MAX_LENGTH)
+        {
+            printf(MAKE_RED "\nFHMD: ERROR: Solution diverged. Atom's coordinates: (%g, %g, %g) nm\n" RESET_COLOR "\n", x[0], x[1], x[2]);
+            exit(20);
+        }
+
+        while(xn[d] < 0)       xn[d] += box[d];
+        while(xn[d] >= box[d]) xn[d] -= box[d];
     }
-
-    while(i >= N.x) i -= N.x;
-    while(j >= N.y) j -= N.y;
-    while(k >= N.z) k -= N.z;
-    while(i < 0)    i += N.x;
-    while(j < 0)    j += N.y;
-    while(k < 0)    k += N.z;
-
-    return i + j*N.x + k*N.x*N.y;
 }
 
-#define C I(i,j,k,fh->N)            /* Current point [i][j][k] */
+
+static int I(const ivec ind, const ivec N)
+{
+    ivec indn;
+
+    copy_ivec(ind, indn);
+
+    for(int d = 0; d < DIM; d++)
+    {
+        if(indn[d] < 0)     indn[d] += N[d];
+        if(indn[d] >= N[d]) indn[d] -= N[d];
+    }
+
+    return indn[0] + indn[1]*N[0] + indn[2]*N[0]*N[1];
+}
+
+
+static int I3(const int i, const int j, const int k, const ivec N)
+{
+    ivec ind;
+
+    ASSIGN_IND(ind, i, j, k);
+
+    return I(ind, N);
+}
 
 #endif /* MACRO_H_ */

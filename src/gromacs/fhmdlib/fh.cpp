@@ -1,63 +1,55 @@
 #include "data_structures.h"
 #include "macro.h"
 
-#define FHMD_GRID_DEBUG
-
 
 void define_FH_grid(t_commrec *cr, FHMD *fh)
 {
-    FH_VecD h0;
+    dvec h0;
+    ivec ind;
 
-    h0.x = (double)(fh->box.x)/(double)(fh->N.x);
-    h0.y = (double)(fh->box.y)/(double)(fh->N.y);
-    h0.z = (double)(fh->box.z)/(double)(fh->N.z);
+    for(int d = 0; d < DIM; d++)
+        h0[d] = fh->box[d]/(double)(fh->N[d]);
 
-    /* Uniform grid */
-
-    for(int k = 0; k < fh->N.z; k++)
+    for(int k = 0; k < NZ; k++)
     {
-        for(int j = 0; j < fh->N.y; j++)
+        for(int j = 0; j < NY; j++)
         {
-            for(int i = 0; i < fh->N.x; i++)
+            for(int i = 0; i < NX; i++)
             {
-                fh->grid.h[C].x = h0.x;
-                fh->grid.h[C].y = h0.y;
-                fh->grid.h[C].z = h0.z;
+                ASSIGN_IND(ind, i, j, k);
 
-                fh->grid.n[C].x = (double)(i)*h0.x;
-                fh->grid.n[C].y = (double)(j)*h0.y;
-                fh->grid.n[C].z = (double)(k)*h0.z;
-
-                fh->grid.c[C].x = fh->grid.n[C].x + 0.5*h0.x;
-                fh->grid.c[C].y = fh->grid.n[C].y + 0.5*h0.y;
-                fh->grid.c[C].z = fh->grid.n[C].z + 0.5*h0.z;
+                for(int d = 0; d < DIM; d++)
+                {
+                    fh->grid.h[C][d] = h0[d];
+                    fh->grid.n[C][d] = (double)(ind[d])*h0[d];
+                    fh->grid.c[C][d] = fh->grid.n[C][d] + 0.5*h0[d];
+                }
             }
         }
     }
 
     for(int i = 0; i < fh->Ntot; i++)
     {
-        fh->grid.vol[i]  = fh->grid.h[i].x*fh->grid.h[i].y*fh->grid.h[i].z;
+        fh->grid.vol[i]  = fh->grid.h[i][0]*fh->grid.h[i][1]*fh->grid.h[i][2];
         fh->grid.ivol[i] = 1.0/fh->grid.vol[i];
     }
 
 #ifdef FHMD_GRID_DEBUG
     if(MASTER(cr)) {
         printf(MAKE_YELLOW "FHMD DEBUG: Grid X (i, nodes, centres, steps):\n");
-        for(int i = 0; i < fh->N.x; i++)
-            printf("%3d  %8.4f  %8.4f  %8.4f\n", i, fh->grid.n[I(i,0,0,fh->N)].x, fh->grid.c[I(i,0,0,fh->N)].x, fh->grid.h[I(i,0,0,fh->N)].x);
-        printf("%3d  %8.4f     ----      ----\n", fh->N.x, fh->grid.n[I(fh->N.x,0,0,fh->N)].x);
+        for(int i = 0; i < fh->N[0]; i++)
+            printf("%3d  %8.4f  %8.4f  %8.4f\n", i, fh->grid.n[I3(i,0,0,fh->N)][0], fh->grid.c[I3(i,0,0,fh->N)][0], fh->grid.h[I3(i,0,0,fh->N)][0]);
+        printf("%3d  %8.4f     ----      ----\n", fh->N[0], fh->grid.n[I3(fh->N[0],0,0,fh->N)][0]);
         printf(MAKE_YELLOW "FHMD DEBUG: Grid Y (i, nodes, centres, steps):\n");
-        for(int i = 0; i < fh->N.y; i++)
-            printf("%3d  %8.4f  %8.4f  %8.4f\n", i, fh->grid.n[I(0,i,0,fh->N)].y, fh->grid.c[I(0,i,0,fh->N)].y, fh->grid.h[I(0,i,0,fh->N)].y);
-        printf("%3d  %8.4f     ----      ----\n", fh->N.x, fh->grid.n[I(0,fh->N.y,0,fh->N)].y);
+        for(int i = 0; i < fh->N[1]; i++)
+            printf("%3d  %8.4f  %8.4f  %8.4f\n", i, fh->grid.n[I3(0,i,0,fh->N)][1], fh->grid.c[I3(0,i,0,fh->N)][1], fh->grid.h[I3(0,i,0,fh->N)][1]);
+        printf("%3d  %8.4f     ----      ----\n", fh->N[1], fh->grid.n[I3(0,fh->N[1],0,fh->N)][1]);
         printf(MAKE_YELLOW "FHMD DEBUG: Grid Z (i, nodes, centres, steps):\n");
-        for(int i = 0; i < fh->N.z; i++)
-            printf("%3d  %8.4f  %8.4f  %8.4f\n", i, fh->grid.n[I(0,0,i,fh->N)].z, fh->grid.c[I(0,0,i,fh->N)].z, fh->grid.h[I(0,0,i,fh->N)].z);
-        printf("%3d  %8.4f     ----      ----\n", fh->N.x, fh->grid.n[I(0,0,fh->N.z,fh->N)].z);
+        for(int i = 0; i < fh->N[2]; i++)
+            printf("%3d  %8.4f  %8.4f  %8.4f\n", i, fh->grid.n[I3(0,0,i,fh->N)][2], fh->grid.c[I3(0,0,i,fh->N)][2], fh->grid.h[I3(0,0,i,fh->N)][2]);
+        printf("%3d  %8.4f     ----      ----\n", fh->N[2], fh->grid.n[I3(0,0,fh->N[2],fh->N)][2]);
         printf("==============================================\n");
         printf(RESET_COLOR "\n");
     }
 #endif
-
 }

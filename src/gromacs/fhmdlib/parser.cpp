@@ -4,7 +4,6 @@
 
 int parse_prm(char const *fname, FHMD *fh)
 {
-
     const char c = ';';     // comment delimiter
 
     FILE *fprm;
@@ -16,7 +15,6 @@ int parse_prm(char const *fname, FHMD *fh)
 
     while(fscanf(fprm, "%s", line) != -1)
     {
-
         if(line[0] == c) skip_line(fprm);   // skip comment
 
         if(!strcmp(line, "S") || !strcmp(line, "s"))
@@ -34,11 +32,11 @@ int parse_prm(char const *fname, FHMD *fh)
         else if(!strcmp(line, "beta"))
             ok = assign_double_value(&fh->beta, line, fprm);
         else if(!strcmp(line, "Nx"))
-            ok = assign_int_value(&fh->N.x, line, fprm);
+            ok = assign_int_value(&fh->N[0], line, fprm);
         else if(!strcmp(line, "Ny"))
-            ok = assign_int_value(&fh->N.y, line, fprm);
+            ok = assign_int_value(&fh->N[1], line, fprm);
         else if(!strcmp(line, "Nz"))
-            ok = assign_int_value(&fh->N.z, line, fprm);
+            ok = assign_int_value(&fh->N[2], line, fprm);
         else if(!strcmp(line, "FH_equil"))
             ok = assign_int_value(&fh->FH_equil, line, fprm);
         else if(!strcmp(line, "FH_step"))
@@ -49,30 +47,25 @@ int parse_prm(char const *fname, FHMD *fh)
             ok = assign_double_value(&fh->FH_temp, line, fprm);
 
         if(!ok) return 0;   // error in prm-file
-
     }
 
     fclose(fprm);
 
     return 1;
-
 }
 
 
 void skip_line(FILE *fprm)
 {
-
     int ok = 1;
     char c = '0';
 
     while((c != '\n') && (ok == 1)) ok = fscanf(fprm, "%c", &c);
-
 }
 
 
 int assign_int_value(int *v, char *line, FILE *fprm)
 {
-
     int ok = fscanf(fprm, "%s", line);  // skip 'equal' delimiter
 
     ok = fscanf(fprm, "%s", line);
@@ -82,13 +75,11 @@ int assign_int_value(int *v, char *line, FILE *fprm)
     } else {
         return 1;
     }
-
 }
 
 
 int assign_double_value(double *v, char *line, FILE *fprm)
 {
-
     float f;
 
     int ok = fscanf(fprm, "%s", line);  // skip 'equal' delimiter
@@ -101,5 +92,4 @@ int assign_double_value(double *v, char *line, FILE *fprm)
         *v = f;
         return 1;
     }
-
 }

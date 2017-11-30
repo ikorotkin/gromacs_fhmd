@@ -810,7 +810,7 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
     /*
      * FHMD Initialization
      */
-    int is_fhmd = fhmd_init(state->box, mdatoms->homenr, cr, &fhmd);
+    int is_fhmd = fhmd_init(state->box, mdatoms->homenr, mdatoms->massT, cr, &fhmd);
 
     /* and stop now if we should */
     bLastStep = (bLastStep || (ir->nsteps >= 0 && step_rel > ir->nsteps));
@@ -1457,7 +1457,6 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
             }
             else /******************** FHMD coupling ********************/
             {
-
                 /*
                  * FHMD: Update MD variables in the FH cells
                  */
@@ -1468,16 +1467,20 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                  */
                 if(PAR(cr))
                 {
-                    gmx_bcast(sizeof(FH_arrays)*fhmd.Ntot, fhmd.arr, cr);
-                    fhmd_sum_arrays(cr, &fhmd);
+                    fhmd_sum_arrays(cr, &fhmd);                             // for selected arrays
+                    gmx_bcast(sizeof(FH_arrays)*fhmd.Ntot, fhmd.arr, cr);   // actually we need this only for FH arrays
                 }
+
+                /*
+                 * FHMD: Estimate MD/FH coupling terms
+                 */
+                fhmd_calculate_MDFH_terms(&fhmd);
 
                 /*
                  * FHMD: Modified update_coords() here
                  */
                 fhmd_update_coords(fplog, step, ir, mdatoms, state, f, fcd,
                                    ekind, M, upd, etrtPOSITION, cr, constr, &fhmd);
-
             }
 
             wallcycle_stop(wcycle, ewcUPDATE);

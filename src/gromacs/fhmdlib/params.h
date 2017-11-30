@@ -1,9 +1,12 @@
 #ifndef FHMD_PARAMS_H_
 #define FHMD_PARAMS_H_
 
-#define fhmd_version        3.00            /* FHMD model version */
+#define FHMD_VERSION        3.00            /* FHMD model version */
 
-#define FHMD_IND_MAX        1000            /* Maximum dimension of MDFH arrays -- for control purpose only */
+#define FHMD_MAX_LENGTH     1000.0          /* Maximum length scale [nm] -- for control purpose only */
+
+#define FHMD_GRID_DEBUG                     /* Print FH grid coordinates to the screen */
+
 
 /* Color codes */
 #ifndef _MSC_VER

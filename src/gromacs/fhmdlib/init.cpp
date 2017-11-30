@@ -3,12 +3,11 @@
 #include "fh.h"
 
 
-int fhmd_init(matrix box, int N_atoms, t_commrec *cr, FHMD *fh)
+int fhmd_init(matrix box, int N_atoms, real mass[], t_commrec *cr, FHMD *fh)
 {
 
     if(MASTER(cr))
     {
-
         char const *fname_in  = "coupling.prm";
         char const *fname_out = "coupling_out.prm";
 
@@ -16,9 +15,9 @@ int fhmd_init(matrix box, int N_atoms, t_commrec *cr, FHMD *fh)
 
         printf(MAKE_GREEN "\n  Aston University, Department of Mathematics, Dmitry Nerukh Research Group\n");
         printf("  Queen Mary University of London, School of Engineering and Material Science\n\n");
-        printf(MAKE_BLUE "     Hybrid Molecular Dynamics - 2-Way Coupling Parallel VERSION %4.2f\n\n", fhmd_version);
+        printf(MAKE_BLUE "     Hybrid Molecular Dynamics - 2-Way Coupling Parallel VERSION %4.2f\n\n", FHMD_VERSION);
 
-        /* Default FHMD parameters */
+        /* Default values of FHMD parameters */
 
         fh->S           = 0;
         fh->R1          = 0.5;
@@ -27,9 +26,9 @@ int fhmd_init(matrix box, int N_atoms, t_commrec *cr, FHMD *fh)
         fh->Smax        = 0.99;
         fh->alpha       = 10;
         fh->beta        = 10;
-        fh->N.x         = 5;
-        fh->N.y         = 5;
-        fh->N.z         = 5;
+        fh->N[0]        = 5;
+        fh->N[1]        = 5;
+        fh->N[2]        = 5;
         fh->FH_step     = 10;
         fh->FH_equil    = 1000;
         fh->FH_dens     = 600;
@@ -40,14 +39,14 @@ int fhmd_init(matrix box, int N_atoms, t_commrec *cr, FHMD *fh)
         printf(MAKE_GREEN "FHMD: Reading parameters from %s..." RESET_COLOR " ", fname_in);
 
         int ok = parse_prm(fname_in, fh);
-        
+
         FILE *fw;
 
         if(ok == 1) {
             printf(MAKE_GREEN "...OK\n" RESET_COLOR "\n");
             fw = fopen(fname_out, "w");
         } else if(ok == -1) {
-            printf(MAKE_RED "\nFHMD: File %s not found. Generating one with default parameters...\n" RESET_COLOR "\n", fname_in);
+            printf(MAKE_RED "\nFHMD: File %s not found. Generating default parameter file...\n" RESET_COLOR "\n", fname_in);
             fw = fopen(fname_in, "w");
         } else {
             printf(MAKE_RED "\nFHMD: ERROR in %s file\n" RESET_COLOR "\n", fname_in);
@@ -56,7 +55,7 @@ int fhmd_init(matrix box, int N_atoms, t_commrec *cr, FHMD *fh)
 
         /* Print FHMD parameters to the screen and output file */
 
-        fprintf(fw, "; Hybrid Molecular Dynamics - 2-Way Coupling Parallel VERSION %4.2f\n\n", fhmd_version);
+        fprintf(fw, "; Hybrid Molecular Dynamics - 2-Way Coupling Parallel VERSION %4.2f\n\n", FHMD_VERSION);
 
         fprintf(fw, "S = %g               ; Parameter S (-1 if S is variable)\n\n", fh->S);
         fprintf(fw, "R1   = %g          ; MD sphere radius for variable S, [0..1]\n", fh->R1);
@@ -80,17 +79,19 @@ int fhmd_init(matrix box, int N_atoms, t_commrec *cr, FHMD *fh)
         fprintf(fw, "alpha = %g          ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps\n", fh->alpha);
         fprintf(fw, "beta  = %g          ; Beta parameter, nm^2/ps or ps^-1 depending on the scheme\n\n", fh->beta);
 
-        fh->box.x = box[0][0];
-        fh->box.y = box[1][1];
-        fh->box.z = box[2][2];
+        fh->box[0] = box[0][0];
+        fh->box[1] = box[1][1];
+        fh->box[2] = box[2][2];
 
-        printf("FHMD: MD/FH box size: %g x %g x %g\n", fh->box.x, fh->box.y, fh->box.z);
-        printf("FHMD: FH grid size:   %d x %d x %d\n", fh->N.x, fh->N.y, fh->N.z);
-        fprintf(fw, "Nx = %d              ; Number of FH cells along X axis\n", fh->N.x);
-        fprintf(fw, "Ny = %d              ; Number of FH cells along Y axis\n", fh->N.y);
-        fprintf(fw, "Nz = %d              ; Number of FH cells along Z axis\n\n", fh->N.z);
+        fh->box_volume = fh->box[0]*fh->box[1]*fh->box[2];
 
-        fh->Ntot  = fh->N.x*fh->N.y*fh->N.z;
+        printf("FHMD: MD/FH box size: %g x %g x %g\n", fh->box[0], fh->box[1], fh->box[2]);
+        printf("FHMD: FH grid size:   %d x %d x %d\n", fh->N[0], fh->N[1], fh->N[2]);
+        fprintf(fw, "Nx = %d              ; Number of FH cells along X axis\n", fh->N[0]);
+        fprintf(fw, "Ny = %d              ; Number of FH cells along Y axis\n", fh->N[1]);
+        fprintf(fw, "Nz = %d              ; Number of FH cells along Z axis\n\n", fh->N[2]);
+
+        fh->Ntot  = fh->N[0]*fh->N[1]*fh->N[2];
 
         printf("FHMD: FH time step dt_FH = %d * dt_MD\n", fh->FH_step);
         fprintf(fw, "FH_step  = %d       ; FH time step dt_FH = FH_step * dt_MD\n", fh->FH_step);
@@ -107,43 +108,52 @@ int fhmd_init(matrix box, int N_atoms, t_commrec *cr, FHMD *fh)
         fflush(stdout);
         fclose(fw);
 
-        /* Open files for writing */
+        /* TODO: Open files for writing */
 
 
     } // if(MASTER(cr))
+
+    fh->total_density = 0;
+    for(int i = 0; i < N_atoms; i++)
+        fh->total_density += mass[i];
 
     /* Broadcast parameters to all threads */
 
     if(PAR(cr))
     {
-        gmx_bcast(sizeof(FHMD), fh, cr);
+        gmx_sumd(1, &fh->total_density, cr);
         gmx_sumi(1, &N_atoms, cr);
+        gmx_bcast(sizeof(FHMD), fh, cr);
     }
+
+    fh->total_density /= fh->box_volume;
 
     if(MASTER(cr))
     {
         printf(MAKE_GREEN "FHMD: Total number of atoms in the box: %d\n", N_atoms);
+        printf("FHMD: Total density of the box: %g [amu/nm^3]\n", fh->total_density);
         printf(RESET_COLOR "\n");
         fflush(stdout);
     }
 
     /* Allocate memory */
 
-    fh->arr = (FH_arrays*)calloc(fh->Ntot, sizeof(FH_arrays));
-    fh->ind = (int*)calloc(N_atoms, sizeof(int));
+    fh->arr  = (FH_arrays*)calloc(fh->Ntot, sizeof(FH_arrays));
+    fh->ind  = (int*)calloc(N_atoms, sizeof(int));
+    fh->indv = (ivec*)calloc(N_atoms, sizeof(ivec));
 
     fh->mpi_linear = (double*)malloc(fh->Ntot*sizeof(double));
 
-    if(fh->arr == NULL || fh->ind == NULL || fh->mpi_linear == NULL)
+    if(fh->arr == NULL || fh->ind == NULL || fh->indv == NULL || fh->mpi_linear == NULL)
     {
         if(MASTER(cr)) printf(MAKE_RED "\nFHMD: ERROR: Out of memory (array allocator)\n" RESET_COLOR "\n");
         fflush(stdout);
         exit(3);
     }
 
-    fh->grid.c    = (FH_VecD*)malloc(fh->Ntot*sizeof(FH_VecD));
-    fh->grid.n    = (FH_VecD*)malloc(fh->Ntot*sizeof(FH_VecD));
-    fh->grid.h    = (FH_VecD*)malloc(fh->Ntot*sizeof(FH_VecD));
+    fh->grid.c    = (dvec*)malloc(fh->Ntot*sizeof(dvec));
+    fh->grid.n    = (dvec*)malloc(fh->Ntot*sizeof(dvec));
+    fh->grid.h    = (dvec*)malloc(fh->Ntot*sizeof(dvec));
     fh->grid.vol  = (double*)malloc(fh->Ntot*sizeof(double));
     fh->grid.ivol = (double*)malloc(fh->Ntot*sizeof(double));
 
