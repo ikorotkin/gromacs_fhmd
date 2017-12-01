@@ -71,10 +71,19 @@ void fhmd_do_update_md(int start, int nrend,
                 trilinear_find_neighbours(x[n], n, xi, nbr, fh);
 
                 trilinear_interpolation(f_fh,         xi, INTERPOLATE(f_fh));
-                trilinear_interpolation(u_fh,         xi, INTERPOLATE(u_fh));
+                //trilinear_interpolation(u_fh,         xi, INTERPOLATE(u_fh));
+                trilinear_interpolation(u_fh,         xi, INTERPOLATE(u_md));
                 trilinear_interpolation(alpha_term,   xi, INTERPOLATE(alpha_term));
                 trilinear_interpolation(beta_term,    xi, INTERPOLATE(beta_term));
                 trilinear_interpolation(alpha_x_term, xi, INTERPOLATE(alpha_x_term));
+
+#ifdef FHMD_DEBUG_INTERPOL
+                if(!(n % 10000) && !(fh->step_MD % 50))
+                    printf("\nStep %d, atom #%d (%g %g %g): %g %g %g\nneighbour cells: %d %d %d %d %d %d %d %d\nrescaled coordinates: %g %g %g\n",
+                            fh->step_MD, n, x[n][0], x[n][1], x[n][2], u_fh[0], u_fh[1], u_fh[2],
+                            nbr[0], nbr[1], nbr[2], nbr[3], nbr[4], nbr[5], nbr[6], nbr[7],
+                            xi[0], xi[1], xi[2]);
+#endif
 
                 if (cTC)
                 {

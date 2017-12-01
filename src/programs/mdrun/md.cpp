@@ -131,6 +131,7 @@
 #include "gromacs/fhmdlib/init.h"
 #include "gromacs/fhmdlib/coupling.h"
 #include "gromacs/fhmdlib/new_update.h"
+#include "gromacs/fhmdlib/output.h"
 
 using gmx::SimulationSignaller;
 
@@ -1457,6 +1458,8 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
             }
             else /******************** FHMD coupling ********************/
             {
+                fhmd.step_MD = step;
+
                 /*
                  * FHMD: Update MD variables in the FH cells
                  */
@@ -1468,13 +1471,17 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 if(PAR(cr))
                 {
                     fhmd_sum_arrays(cr, &fhmd);                             // for selected arrays
-                    gmx_bcast(sizeof(FH_arrays)*fhmd.Ntot, fhmd.arr, cr);   // actually we need this only for FH arrays
+                    gmx_bcast(sizeof(FH_arrays)*fhmd.Ntot, fhmd.arr, cr);   // actually we need this for pure FH arrays only
                 }
 
                 /*
                  * FHMD: Estimate MD/FH coupling terms
                  */
                 fhmd_calculate_MDFH_terms(&fhmd);
+
+#ifdef FHMD_DEBUG
+                if(MASTER(cr)) fhmd_dump_all(&fhmd);
+#endif
 
                 /*
                  * FHMD: Modified update_coords() here

@@ -58,6 +58,7 @@ typedef struct FHMD
     double      box_volume;     /* Volume of the box, nm^3 */
     double      total_density;  /* Total density of the box, a.m.u./nm^3 */
     int         Ntot;           /* Total number of FH cells */
+    int         step_MD;        /* Current MD time step */
 
     int         FH_step;        /* dt_FH = FH_step * dt_MD */
     int         FH_equil;       /* Number of time steps for the FH model equilibration */

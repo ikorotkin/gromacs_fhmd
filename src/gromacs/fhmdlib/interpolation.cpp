@@ -17,11 +17,11 @@ void trilinear_find_neighbours(const rvec x, const int n, dvec xi, int *nbr, FHM
         if((xn[d] - fh->grid.c[ind][d]) > 0) {
             il[d]    = fh->indv[n][d];
             ir[d]    = fh->indv[n][d] + 1;
-            shift[d] = 0;
+            shift[d] = -0.5*fh->grid.h[ind][d];
         } else {
             il[d]    = fh->indv[n][d] - 1;
             ir[d]    = fh->indv[n][d];
-            shift[d] = fh->box[d];
+            shift[d] = 0.5*fh->grid.h[I3(fh->indv[n][0]-1, fh->indv[n][1]-1, fh->indv[n][2]-1, fh->N)][d];  // change this to the cell down in the d direction
         }
     }
 
@@ -37,7 +37,7 @@ void trilinear_find_neighbours(const rvec x, const int n, dvec xi, int *nbr, FHM
 
     /* Shift and rescale coordinates */
     for(int d = 0; d < DIM; d++)
-        xi[d] = (xn[d] - fh->grid.c[nbr[0]][d] + shift[d])/((fh->grid.h[nbr[0]][d] + fh->grid.h[nbr[7]][d])*0.5);
+        xi[d] = (xn[d] - fh->grid.n[ind][d] + shift[d])/((fh->grid.h[nbr[0]][d] + fh->grid.h[nbr[7]][d])*0.5);
 }
 
 

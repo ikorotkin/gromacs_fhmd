@@ -5,7 +5,9 @@
 
 #define FHMD_MAX_LENGTH     1000.0          /* Maximum length scale [nm] -- for control purpose only */
 
-#define FHMD_GRID_DEBUG                     /* Print FH grid coordinates to the screen */
+#define FHMD_DEBUG                          /* Write debug information */
+#define FHMD_DEBUG_GRID                     /* Print FH grid coordinates to the screen */
+#define FHMD_DEBUG_INTERPOL                 /* Print interpolated values for debugging */
 
 
 /* Color codes */

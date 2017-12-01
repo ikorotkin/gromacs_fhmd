@@ -4,7 +4,6 @@
 
 void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], int N_atoms, FHMD *fh)
 {
-
     FH_arrays *arr = fh->arr;
     dvec       xn;
     int        ind;
@@ -13,6 +12,11 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], int N_atoms, FHMD *fh
     for(int i = 0; i < fh->Ntot; i++)
     {
         arr[i].ro_md = 0;
+
+        for(int d = 0; d < DIM; d++)
+        {
+            arr[i].u_md[d] = 0;
+        }
     }
 
     /* Collect statistics */
@@ -36,6 +40,11 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], int N_atoms, FHMD *fh
         fh->ind[n] = ind;
 
         arr[ind].ro_md += mass[n];
+
+        for(int d = 0; d < DIM; d++)
+        {
+            arr[ind].u_md[d] += v[n][d];
+        }
     }
 
     /* Update statistics */
@@ -43,36 +52,38 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], int N_atoms, FHMD *fh
     {
         arr[i].ro_md *= fh->grid.ivol[i];
     }
-
 }
 
 
 void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
 {
-
     FH_arrays *arr = fh->arr;
 
     /* Pack FHMD arrays to linear array */
     for(int i = 0; i < fh->Ntot; i++)
     {
-        fh->mpi_linear[i] = arr[i].ro_md;
+        fh->mpi_linear[i]              = arr[i].ro_md;
+        fh->mpi_linear[i + fh->Ntot]   = arr[i].u_md[0];
+        fh->mpi_linear[i + fh->Ntot*2] = arr[i].u_md[1];
+        fh->mpi_linear[i + fh->Ntot*3] = arr[i].u_md[2];
     }
 
     /* Broadcast linear array */
-    gmx_sumd(fh->Ntot, fh->mpi_linear, cr);
+    gmx_sumd(fh->Ntot*4, fh->mpi_linear, cr);
 
     /* Unpack linear array */
     for(int i = 0; i < fh->Ntot; i++)
     {
-        arr[i].ro_md = fh->mpi_linear[i];
+        arr[i].ro_md   = fh->mpi_linear[i];
+        arr[i].u_md[0] = fh->mpi_linear[i + fh->Ntot];
+        arr[i].u_md[1] = fh->mpi_linear[i + fh->Ntot*2];
+        arr[i].u_md[2] = fh->mpi_linear[i + fh->Ntot*3];
     }
-
 }
 
 
 void fhmd_calculate_MDFH_terms(FHMD *fh)
 {
-
     FH_arrays *arr = fh->arr;
 
     for(int i = 0; i < fh->Ntot; i++)
@@ -83,6 +94,5 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
         }
         arr[i].inv_ro = 1.0/arr[i].ro_md;
     }
-
 }
 

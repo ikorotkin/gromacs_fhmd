@@ -142,7 +142,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], t_commrec *cr, FHMD *fh)
     fh->ind  = (int*)calloc(N_atoms, sizeof(int));
     fh->indv = (ivec*)calloc(N_atoms, sizeof(ivec));
 
-    fh->mpi_linear = (double*)malloc(fh->Ntot*sizeof(double));
+    fh->mpi_linear = (double*)malloc(4*fh->Ntot*sizeof(double));
 
     if(fh->arr == NULL || fh->ind == NULL || fh->indv == NULL || fh->mpi_linear == NULL)
     {

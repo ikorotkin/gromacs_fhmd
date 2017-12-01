@@ -34,7 +34,7 @@ void define_FH_grid(t_commrec *cr, FHMD *fh)
         fh->grid.ivol[i] = 1.0/fh->grid.vol[i];
     }
 
-#ifdef FHMD_GRID_DEBUG
+#ifdef FHMD_DEBUG_GRID
     if(MASTER(cr)) {
         printf(MAKE_YELLOW "FHMD DEBUG: Grid X (i, nodes, centres, steps):\n");
         for(int i = 0; i < fh->N[0]; i++)
