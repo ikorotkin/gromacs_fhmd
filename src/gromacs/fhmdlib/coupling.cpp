@@ -15,7 +15,8 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], int N_atoms, FHMD *fh
 
         for(int d = 0; d < DIM; d++)
         {
-            arr[i].u_md[d] = 0;
+            arr[i].u_md[d]   = 0;
+            arr[i].uro_md[d] = 0;
         }
     }
 
@@ -31,9 +32,9 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], int N_atoms, FHMD *fh
 
         ind = I(fh->indv[n], fh->N);
 
-        if(ind < 0)     // This should never happen... only if the coordinates are NaN.
+        if(ind < 0 || ind >= fh->Ntot)      // This should never happen... only if the coordinates are NaN.
         {
-            printf(MAKE_RED "\nFHMD: ERROR: Solution diverged. Atom's coordinates: (%g, %g, %g) nm\n" RESET_COLOR "\n", xn[0], xn[1], xn[2]);
+            printf(MAKE_RED "\nFHMD: ERROR: Solution diverged. Atom #%d coordinates: (%g, %g, %g) nm\n" RESET_COLOR "\n", n, xn[0], xn[1], xn[2]);
             exit(21);
         }
 
@@ -43,7 +44,8 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], int N_atoms, FHMD *fh
 
         for(int d = 0; d < DIM; d++)
         {
-            arr[ind].u_md[d] += v[n][d];
+            arr[ind].u_md[d]   += v[n][d];
+            arr[ind].uro_md[d] += v[n][d]*mass[n];
         }
     }
 
@@ -51,6 +53,11 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], int N_atoms, FHMD *fh
     for(int i = 0; i < fh->Ntot; i++)
     {
         arr[i].ro_md *= fh->grid.ivol[i];
+
+        for(int d = 0; d < DIM; d++)
+        {
+            arr[i].uro_md[d] *= fh->grid.ivol[i];
+        }
     }
 }
 
@@ -66,18 +73,24 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
         fh->mpi_linear[i + fh->Ntot]   = arr[i].u_md[0];
         fh->mpi_linear[i + fh->Ntot*2] = arr[i].u_md[1];
         fh->mpi_linear[i + fh->Ntot*3] = arr[i].u_md[2];
+        fh->mpi_linear[i + fh->Ntot*4] = arr[i].uro_md[0];
+        fh->mpi_linear[i + fh->Ntot*5] = arr[i].uro_md[1];
+        fh->mpi_linear[i + fh->Ntot*6] = arr[i].uro_md[2];
     }
 
     /* Broadcast linear array */
-    gmx_sumd(fh->Ntot*4, fh->mpi_linear, cr);
+    gmx_sumd(fh->Ntot*7, fh->mpi_linear, cr);
 
     /* Unpack linear array */
     for(int i = 0; i < fh->Ntot; i++)
     {
-        arr[i].ro_md   = fh->mpi_linear[i];
-        arr[i].u_md[0] = fh->mpi_linear[i + fh->Ntot];
-        arr[i].u_md[1] = fh->mpi_linear[i + fh->Ntot*2];
-        arr[i].u_md[2] = fh->mpi_linear[i + fh->Ntot*3];
+        arr[i].ro_md     = fh->mpi_linear[i];
+        arr[i].u_md[0]   = fh->mpi_linear[i + fh->Ntot];
+        arr[i].u_md[1]   = fh->mpi_linear[i + fh->Ntot*2];
+        arr[i].u_md[2]   = fh->mpi_linear[i + fh->Ntot*3];
+        arr[i].uro_md[0] = fh->mpi_linear[i + fh->Ntot*4];
+        arr[i].uro_md[1] = fh->mpi_linear[i + fh->Ntot*5];
+        arr[i].uro_md[2] = fh->mpi_linear[i + fh->Ntot*6];
     }
 }
 
@@ -92,6 +105,7 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
             printf(MAKE_RED "\nFHMD: ERROR: Zero or NaN MD density in the cell #%d (ro_md = %g)\n" RESET_COLOR "\n", i, arr[i].ro_md);
             exit(22);
         }
+
         arr[i].inv_ro = 1.0/arr[i].ro_md;
     }
 }

@@ -18,10 +18,23 @@ typedef struct FH_arrays        /* FH/MD arrays */
     double      ro_md, ro_fh;   /* densities */
     double      inv_ro;         /* inverse density: 1/ro_md */
     dvec        u_md, u_fh;     /* velocities */
+    dvec        uro_md;         /* momentum */
     dvec        f_fh;           /* FH force */
     dvec        alpha_term;     /* alpha term for du/dt equation */
     dvec        beta_term;      /* beta term for du/dt equation */
     dvec        alpha_x_term;   /* alpha term for dx/dt equation */
+
+    double      ro_prime, ron_prime;    /* density prime */
+    double      ro_star, ron_star;      /* density star */
+    dvec        m_prime, mn_prime;      /* m prime */
+    dvec        m_star, mn_star;        /* m star */
+
+    double      p, pn;                  /* FH pressure */
+    dvec        rox, roxn, px, pxn;     /* FH flux variables */
+    matrix      ux, uxn;                /* FH flux velocities */
+    double      ro_fh_n;                /* FH density (new time layer) */
+    dvec        u_fh_n;                 /* FH velocity (new time layer) */
+    matrix      rans;                   /* FH random stress */
 } FH_arrays;
 
 
@@ -37,7 +50,6 @@ typedef struct FH_grid          /* Computational grid */
 
 typedef struct FHMD
 {
-
     FH_arrays  *arr;            /* FH/MD arrays */
     FH_grid     grid;           /* FH grid */
     int        *ind;            /* FH cell number for each atom */
@@ -60,11 +72,13 @@ typedef struct FHMD
     int         Ntot;           /* Total number of FH cells */
     int         step_MD;        /* Current MD time step */
 
+    int         FH_EOS;         /* EOS: 0 - Liquid Argon, 1 - SPC/E water */
+    FHMD_EOS    eos;            /* Equation of state */
     int         FH_step;        /* dt_FH = FH_step * dt_MD */
     int         FH_equil;       /* Number of time steps for the FH model equilibration */
     double      FH_dens;        /* FH mean density */
     double      FH_temp;        /* FH mean temperature */
-
+    double      dt_FH;          /* FH time step */
 } FHMD;
 
 #endif /* FHMD_DATA_STRUCTURES_H_ */

@@ -3,9 +3,8 @@
 #include "fh.h"
 
 
-int fhmd_init(matrix box, int N_atoms, real mass[], t_commrec *cr, FHMD *fh)
+int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr, FHMD *fh)
 {
-
     if(MASTER(cr))
     {
         char const *fname_in  = "coupling.prm";
@@ -29,6 +28,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], t_commrec *cr, FHMD *fh)
         fh->N[0]        = 5;
         fh->N[1]        = 5;
         fh->N[2]        = 5;
+        fh->FH_EOS      = 1;
         fh->FH_step     = 10;
         fh->FH_equil    = 1000;
         fh->FH_dens     = 600;
@@ -93,7 +93,26 @@ int fhmd_init(matrix box, int N_atoms, real mass[], t_commrec *cr, FHMD *fh)
 
         fh->Ntot  = fh->N[0]*fh->N[1]*fh->N[2];
 
-        printf("FHMD: FH time step dt_FH = %d * dt_MD\n", fh->FH_step);
+        switch(fh->FH_EOS)
+        {
+        case 0:
+            fh->eos = eos_argon;
+            printf("FHMD: Equation of state: Liquid Argon (300K)\n");
+            break;
+        case 1:
+            fh->eos = eos_spce;
+            printf("FHMD: Equation of state: Rigid SPC/E water\n");
+            break;
+        default:
+            printf(MAKE_RED "\nFHMD: Unknown equation of state (%d) in %s\n" RESET_COLOR "\n", fh->FH_EOS, fname_in);
+            exit(18);
+        }
+
+        fprintf(fw, "FH_EOS   = %d       ; EOS: 0 - Liquid Argon, 1 - SPC/E water\n", fh->FH_EOS);
+
+        fh->dt_FH = (double)(fh->FH_step)*dt_md;
+
+        printf("FHMD: FH time step dt_FH = %d * dt_MD = %g [ps]\n", fh->FH_step, fh->dt_FH);
         fprintf(fw, "FH_step  = %d       ; FH time step dt_FH = FH_step * dt_MD\n", fh->FH_step);
 
         printf("FHMD: FH equilibration steps: %d\n", fh->FH_equil);
@@ -109,7 +128,6 @@ int fhmd_init(matrix box, int N_atoms, real mass[], t_commrec *cr, FHMD *fh)
         fclose(fw);
 
         /* TODO: Open files for writing */
-
 
     } // if(MASTER(cr))
 
@@ -142,7 +160,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], t_commrec *cr, FHMD *fh)
     fh->ind  = (int*)calloc(N_atoms, sizeof(int));
     fh->indv = (ivec*)calloc(N_atoms, sizeof(ivec));
 
-    fh->mpi_linear = (double*)malloc(4*fh->Ntot*sizeof(double));
+    fh->mpi_linear = (double*)malloc(7*fh->Ntot*sizeof(double));    // 7 components: ro_md, u_md[3], uro_md[3]
 
     if(fh->arr == NULL || fh->ind == NULL || fh->indv == NULL || fh->mpi_linear == NULL)
     {
@@ -164,10 +182,12 @@ int fhmd_init(matrix box, int N_atoms, real mass[], t_commrec *cr, FHMD *fh)
         exit(3);
     }
 
-    /* Create FH grid */
+    /* Create FH grid and initialise FH solver */
 
     define_FH_grid(cr, fh);
 
-    return 1;   // Success
+    if(MASTER(cr))
+        FH_init(fh);
 
+    return 1;   // Success
 }

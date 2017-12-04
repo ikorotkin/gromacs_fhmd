@@ -21,7 +21,7 @@ void trilinear_find_neighbours(const rvec x, const int n, dvec xi, int *nbr, FHM
         } else {
             il[d]    = fh->indv[n][d] - 1;
             ir[d]    = fh->indv[n][d];
-            shift[d] = 0.5*fh->grid.h[I3(fh->indv[n][0]-1, fh->indv[n][1]-1, fh->indv[n][2]-1, fh->N)][d];  // change this to the cell down in the d direction
+            shift[d] = 0.5*fh->grid.h[I3(fh->indv[n][0]-1, fh->indv[n][1]-1, fh->indv[n][2]-1, fh->N)][d];
         }
     }
 

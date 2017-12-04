@@ -37,6 +37,8 @@ int parse_prm(char const *fname, FHMD *fh)
             ok = assign_int_value(&fh->N[1], line, fprm);
         else if(!strcmp(line, "Nz"))
             ok = assign_int_value(&fh->N[2], line, fprm);
+        else if(!strcmp(line, "FH_EOS"))
+            ok = assign_int_value(&fh->FH_EOS, line, fprm);
         else if(!strcmp(line, "FH_equil"))
             ok = assign_int_value(&fh->FH_equil, line, fprm);
         else if(!strcmp(line, "FH_step"))

@@ -5,10 +5,22 @@
 
 #define FHMD_MAX_LENGTH     1000.0          /* Maximum length scale [nm] -- for control purpose only */
 
+#define FHMD_kB             0.00831451      /* Boltzmann constant [kJ/(mol*K)] */
+
+#define FHMD_BLENDING       -1              /* FH Blending: -1 - dynamic, or define static blending parameter (0.0 = Central Diff., 1.0 = Classic CABARET) */
+
 #define FHMD_DEBUG                          /* Write debug information */
 #define FHMD_DEBUG_GRID                     /* Print FH grid coordinates to the screen */
-#define FHMD_DEBUG_INTERPOL                 /* Print interpolated values for debugging */
+//#define FHMD_DEBUG_INTERPOL                 /* Print interpolated values for debugging */
 
+enum FHMD_EOS {eos_argon, eos_spce};        /* Equation of state enumeration */
+
+/* EOS coefficients for RIGID SPC/E water */
+#define FHMD_EOS_SPCE_MU    409.496
+#define FHMD_EOS_SPCE_KAPPA 933.41
+#define FHMD_EOS_SPCE_A     0.010102137
+#define FHMD_EOS_SPCE_B    -10.133069
+#define FHMD_EOS_SPCE_C     2428.9203
 
 /* Color codes */
 #ifndef _MSC_VER
