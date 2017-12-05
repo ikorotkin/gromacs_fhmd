@@ -1,6 +1,6 @@
 #include "data_structures.h"
 #include "parser.h"
-#include "fh.h"
+#include "fh_functions.h"
 
 
 int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr, FHMD *fh)
@@ -14,7 +14,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
 
         printf(MAKE_GREEN "\n  Aston University, Department of Mathematics, Dmitry Nerukh Research Group\n");
         printf("  Queen Mary University of London, School of Engineering and Material Science\n\n");
-        printf(MAKE_BLUE "     Hybrid Molecular Dynamics - 2-Way Coupling Parallel VERSION %4.2f\n\n", FHMD_VERSION);
+        printf(MAKE_PURPLE "     Hybrid Molecular Dynamics - 2-Way Coupling Parallel VERSION %4.2f\n\n", FHMD_VERSION);
 
         /* Default values of FHMD parameters */
 
@@ -30,7 +30,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
         fh->N[2]        = 5;
         fh->FH_EOS      = 1;
         fh->FH_step     = 10;
-        fh->FH_equil    = 1000;
+        fh->FH_equil    = 100000;
         fh->FH_dens     = 600;
         fh->FH_temp     = 300;
 
@@ -108,7 +108,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
             exit(18);
         }
 
-        fprintf(fw, "FH_EOS   = %d       ; EOS: 0 - Liquid Argon, 1 - SPC/E water\n", fh->FH_EOS);
+        fprintf(fw, "FH_EOS   = %d        ; EOS: 0 - Liquid Argon, 1 - SPC/E water\n", fh->FH_EOS);
 
         fh->dt_FH = (double)(fh->FH_step)*dt_md;
 
@@ -187,7 +187,10 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
     define_FH_grid(cr, fh);
 
     if(MASTER(cr))
+    {
         FH_init(fh);
+        FH_equilibrate(fh);
+    }
 
     return 1;   // Success
 }

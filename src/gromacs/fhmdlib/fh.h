@@ -1,6 +1,8 @@
 #ifndef FHMD_FH_H_
 #define FHMD_FH_H_
 
+#include "fh_functions.h"
+
 gmx_inline static double fmax_(double x1, double x2)
 {
     return x1 > x2 ? x1 : x2;
@@ -31,20 +33,16 @@ gmx_inline static double DRNOR()
     return R11*cos(R22);
 }
 
-
-void FH_init(FHMD *fh);
-void FH_predictor(FHMD *fh);
-void FH_corrector(FHMD *fh);
-void FH_char(FHMD *fh);
-void FH_do_single_timestep(FHMD *fh);
-void FH_equilibrate(FHMD *fh);
-void define_FH_grid(t_commrec *cr, FHMD *fh);
-
-
 double MU, KAPPA, EOS_A, EOS_B, EOS_C, P_INIT, SOUND, VISC1, VISC2;
+double T;
+int    STEP;
 double blend;
+
 double T_INST, T_AVG, RHO_AVG, RHO2_AVG, P_AVG;
 int    NT_AVG, N_AVG;
 dvec   U_AVG, U2_AVG;
+
+double std_rho, avg_rho, sound, avg_p, avg_T;
+dvec   std_u, avg_u, avg_sound;
 
 #endif /* FHMD_FH_H_ */

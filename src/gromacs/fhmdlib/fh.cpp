@@ -56,6 +56,10 @@ void FH_init(FHMD *fh)
         }
     }
 
+    T        = 0;       // Current time
+    STEP     = 0;       // Current time step
+
+    // Reset statistics
     T_AVG    = 0;
     NT_AVG   = 0;
     RHO_AVG  = 0;
@@ -73,7 +77,224 @@ void FH_init(FHMD *fh)
 
 void FH_predictor(FHMD *fh)
 {
+    FH_arrays *arr = fh->arr;
 
+    double PG;  // former QQ
+    dvec   F, TAU, TAURAN;
+    matrix TAUL, TAUR;
+
+
+
+
+
+//    double FX,FY,FZ,QQ,TAUX,TAUY,TAUZ,TAURANX,TAURANY,TAURANZ;
+//    double TAUXXR,TAUXXL,TAUXYT,TAUXYB,TAUXZU,TAUXZD;
+//    double TAUYXR,TAUYXL,TAUYYT,TAUYYB,TAUYZU,TAUYZD;
+//    double TAUZXR,TAUZXL,TAUZYT,TAUZYB,TAUZZU,TAUZZD;
+    double DuxDX_CLC,DuxDX_RCC,DuxDX_RLC,DuxDX_RLB,DuxDX_RLT,DuxDX_RLD,DuxDX_RLU;
+    double DuyDX_CLC,DuyDX_RCC,DuyDX_RLC,DuyDX_RLB,DuyDX_RLT;
+    double DuzDX_CLC,DuzDX_RCC,DuzDX_RLC,DuzDX_RLD,DuzDX_RLU;
+
+    double DuxDY_TBC,DuxDY_TBL,DuxDY_TBR,DuxDY_CBC,DuxDY_TCC;
+    double DuyDY_TBC,DuyDY_TBL,DuyDY_TBR,DuyDY_CBC,DuyDY_TCC,DuyDY_TBD,DuyDY_TBU;
+    double DuzDY_CBC,DuzDY_TCC,DuzDY_TBC,DuzDY_TBD,DuzDY_TBU;
+
+    double DuxDZ_UDC,DuxDZ_UDL,DuxDZ_UDR,DuxDZ_CDC,DuxDZ_UCC;
+    double DuyDZ_CDC,DuyDZ_UCC,DuyDZ_UDC,DuyDZ_UDB,DuyDZ_UDT;
+    double DuzDZ_UDC,DuzDZ_UDL,DuzDZ_UDR,DuzDZ_UDB,DuzDZ_UDT,DuzDZ_CDC,DuzDZ_UCC;
+/*
+    for(k=1; k<=N3-1; k++)
+    {
+        for(j=1; j<=N2-1; j++)
+        {
+            for(i=1; i<=N1-1; i++)
+            {
+        // ========= [mass conservation ===================================================================================================
+                // density flux
+                FX  = ( rox[i+1][j  ][k  ]*uxx[i+1][j  ][k  ] - rox[i][j][k]*uxx[i][j][k] ) /hc[i];   //*HXI;
+                FY  = ( roy[i  ][j+1][k  ]*uyy[i  ][j+1][k  ] - roy[i][j][k]*uyy[i][j][k] ) *HYI;
+                FZ  = ( roz[i  ][j  ][k+1]*uzz[i  ][j  ][k+1] - roz[i][j][k]*uzz[i][j][k] ) *HZI;
+
+                // integration in time
+                rocn[i][j][k] = roc[i][j][k] - 0.5*DT*(FX+FY+FZ);
+
+        // ========= [momentum conservation ===============================================================================================
+        // ----------------- X direction --------------------------------------------------------------------------------------------------
+                // momentum flux
+                FX  = ( rox[i+1][j  ][k  ]*uxx[i+1][j  ][k  ]*uxx[i+1][j  ][k  ] - rox[i][j][k]*uxx[i][j][k]*uxx[i][j][k] ) /hc[i];   //*HXI;
+                FY  = ( roy[i  ][j+1][k  ]*uyy[i  ][j+1][k  ]*uxy[i  ][j+1][k  ] - roy[i][j][k]*uyy[i][j][k]*uxy[i][j][k] ) *HYI;
+                FZ  = ( roz[i  ][j  ][k+1]*uzz[i  ][j  ][k+1]*uxz[i  ][j  ][k+1] - roz[i][j][k]*uzz[i][j][k]*uxz[i][j][k] ) *HZI;
+
+                // pressure flux
+                QQ = (px[i+1][j  ][k  ]-px[i][j][k]) /hc[i];    //*HXI;
+                // viscous flux
+                DuxDX_RCC = (uxc[i+1][j  ][k  ]-uxc[i  ][j  ][k  ])/((hc[i+1] + hc[i])*0.5);    //*HXI;
+                DuxDX_CLC = (uxc[i  ][j  ][k  ]-uxc[i-1][j  ][k  ])/((hc[i] + hc[i-1])*0.5);    //*HXI;
+                DuyDY_TBR = (uyc[i+1][j+1][k  ]-uyc[i+1][j-1][k  ])*0.5*HYI;
+                DuyDY_TBC = (uyc[i  ][j+1][k  ]-uyc[i  ][j-1][k  ])*0.5*HYI;
+                DuyDY_TBL = (uyc[i-1][j+1][k  ]-uyc[i-1][j-1][k  ])*0.5*HYI;
+                DuzDZ_UDC = (uzc[i  ][j  ][k+1]-uzc[i  ][j  ][k-1])*0.5*HZI;
+                DuzDZ_UDR = (uzc[i+1][j  ][k+1]-uzc[i+1][j  ][k-1])*0.5*HZI;
+                DuzDZ_UDL = (uzc[i-1][j  ][k+1]-uzc[i-1][j  ][k-1])*0.5*HZI;
+
+                DuxDY_TCC = (uxc[i  ][j+1][k  ]-uxc[i  ][j  ][k  ])*HYI;
+                DuxDY_CBC = (uxc[i  ][j  ][k  ]-uxc[i  ][j-1][k  ])*HYI;
+                DuyDX_RLC = (uyc[i+1][j  ][k  ]-uyc[i-1][j  ][k  ])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
+                DuyDX_RLT = (uyc[i+1][j+1][k  ]-uyc[i-1][j+1][k  ])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
+                DuyDX_RLB = (uyc[i+1][j-1][k  ]-uyc[i-1][j-1][k  ])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
+
+                DuxDZ_CDC = (uxc[i  ][j  ][k  ]-uxc[i  ][j  ][k-1])*HZI;
+                DuxDZ_UCC = (uxc[i  ][j  ][k+1]-uxc[i  ][j  ][k  ])*HZI;
+                DuzDX_RLC = (uzc[i+1][j  ][k  ]-uzc[i-1][j  ][k  ])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
+                DuzDX_RLU = (uzc[i+1][j  ][k+1]-uzc[i-1][j  ][k+1])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
+                DuzDX_RLD = (uzc[i+1][j  ][k-1]-uzc[i-1][j  ][k-1])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
+
+                TAUXXR = mu0*(VISC1*DuxDX_RCC + VISC2*(0.5*(DuyDY_TBR+DuyDY_TBC)+0.5*(DuzDZ_UDR+DuzDZ_UDC)));
+                TAUXXL = mu0*(VISC1*DuxDX_CLC + VISC2*(0.5*(DuyDY_TBC+DuyDY_TBL)+0.5*(DuzDZ_UDC+DuzDZ_UDL)));
+                TAUXYT = mu0*(      DuxDY_TCC +       (0.5*(DuyDX_RLC+DuyDX_RLT)                            ));
+                TAUXYB = mu0*(      DuxDY_CBC +       (0.5*(DuyDX_RLC+DuyDX_RLB)                            ));
+                TAUXZU = mu0*(      DuxDZ_UCC +       (0.5*(DuzDX_RLC+DuzDX_RLU)                            ));
+                TAUXZD = mu0*(      DuxDZ_CDC +       (0.5*(DuzDX_RLC+DuzDX_RLD)                            ));
+
+                // Viscous stress
+                TAUX = (TAUXXR-TAUXXL)/hc[i];   //*HXI;
+                TAUY = (TAUXYT-TAUXYB)*HYI;
+                TAUZ = (TAUXZU-TAUXZD)*HZI;
+                // random stress
+                TAURANX = (RANSXX[i+1][j  ][k  ]-RANSXX[i  ][j  ][k  ])/hc[i];   //*HXI;
+                TAURANY = (RANSXY[i  ][j+1][k  ]-RANSXY[i  ][j  ][k  ])*HYI;
+                TAURANZ = (RANSXZ[i  ][j  ][k+1]-RANSXZ[i  ][j  ][k  ])*HZI;
+
+                // FH-force
+                fxc[i][j][k]  = -FX-FY-FZ-QQ+TAUX+TAUY+TAUZ+TAURANX+TAURANY+TAURANZ;
+
+                // integration in time
+                uxcn[i][j][k] = ( roc[i][j][k]*uxc[i][j][k] + 0.5*DT*(fxc[i][j][k]) ) /rocn[i][j][k];
+                // -------------------------------------------------------------------------------
+
+        // ----------------- Y direction --------------------------------------------------------------------------------------------------
+                FX = ( rox[i+1][j  ][k  ]*uxx[i+1][j  ][k  ]*uyx[i+1][j  ][k  ] - rox[i][j][k]*uxx[i][j][k]*uyx[i][j][k] ) /hc[i];   //*HXI;
+                FY = ( roy[i  ][j+1][k  ]*uyy[i  ][j+1][k  ]*uyy[i  ][j+1][k  ] - roy[i][j][k]*uyy[i][j][k]*uyy[i][j][k] ) *HYI;
+                FZ = ( roz[i  ][j  ][k+1]*uzz[i  ][j  ][k+1]*uyz[i  ][j  ][k+1] - roz[i][j][k]*uzz[i][j][k]*uyz[i][j][k] ) *HZI;
+                // ---------------------------------------------------------------------------
+                QQ = (py[i  ][j+1][k  ]-py[i][j][k])*HYI;
+                // ---------------------------------------------------------------------------
+
+                DuyDX_RCC = (uyc[i+1][j  ][k  ]-uyc[i  ][j  ][k  ])/((hc[i+1] + hc[i])*0.5);    //*HXI;
+                DuyDX_CLC = (uyc[i  ][j  ][k  ]-uyc[i-1][j  ][k  ])/((hc[i] + hc[i-1])*0.5);    //*HXI;
+                DuxDY_TBR = (uxc[i+1][j+1][k  ]-uxc[i+1][j-1][k  ])*0.5*HYI;
+                DuxDY_TBC = (uxc[i  ][j+1][k  ]-uxc[i  ][j-1][k  ])*0.5*HYI;
+                DuxDY_TBL = (uxc[i-1][j+1][k  ]-uxc[i-1][j-1][k  ])*0.5*HYI;
+
+                DuyDY_TCC = (uyc[i  ][j+1][k  ]-uyc[i  ][j  ][k  ])*HYI;
+                DuyDY_CBC = (uyc[i  ][j  ][k  ]-uyc[i  ][j-1][k  ])*HYI ;
+                DuxDX_RLT = (uxc[i+1][j+1][k  ]-uxc[i-1][j+1][k  ])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
+                DuxDX_RLC = (uxc[i+1][j  ][k  ]-uxc[i-1][j  ][k  ])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
+                DuxDX_RLB = (uxc[i+1][j-1][k  ]-uxc[i-1][j-1][k  ])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
+                DuzDZ_UDT = (uzc[i  ][j+1][k+1]-uzc[i  ][j+1][k-1])*0.5*HZI;
+                DuzDZ_UDC = (uzc[i  ][j  ][k+1]-uzc[i  ][j  ][k-1])*0.5*HZI;
+                DuzDZ_UDB = (uzc[i  ][j-1][k+1]-uzc[i  ][j-1][k-1])*0.5*HZI;
+
+                DuyDZ_UCC = (uyc[i  ][j  ][k+1]-uyc[i  ][j  ][k  ])*HZI;
+                DuyDZ_CDC = (uyc[i  ][j  ][k  ]-uyc[i  ][j  ][k-1])*HZI;
+                DuzDY_TBU = (uzc[i  ][j+1][k+1]-uzc[i  ][j-1][k+1])*0.5*HYI;
+                DuzDY_TBC = (uzc[i  ][j+1][k  ]-uzc[i  ][j-1][k  ])*0.5*HYI;
+                DuzDY_TBD = (uzc[i  ][j+1][k-1]-uzc[i  ][j-1][k-1])*0.5*HYI;
+
+                TAUYXR = mu0*(      DuyDX_RCC +       (0.5*(DuxDY_TBR+DuxDY_TBC)                            ));
+                TAUYXL = mu0*(      DuyDX_CLC +       (0.5*(DuxDY_TBL+DuxDY_TBC)                            ));
+                TAUYYT = mu0*(VISC1*DuyDY_TCC + VISC2*(0.5*(DuxDX_RLT+DuxDX_RLC)+0.5*(DuzDZ_UDT+DuzDZ_UDC)));
+                TAUYYB = mu0*(VISC1*DuyDY_CBC + VISC2*(0.5*(DuxDX_RLC+DuxDX_RLB)+0.5*(DuzDZ_UDC+DuzDZ_UDB)));
+                TAUYZD = mu0*(      DuyDZ_CDC +       (0.5*(DuzDY_TBC+DuzDY_TBD)                            ));
+                TAUYZU = mu0*(      DuyDZ_UCC +       (0.5*(DuzDY_TBC+DuzDY_TBU)                            ));
+
+                // viscous stress
+                TAUX = (TAUYXR-TAUYXL)/hc[i];   //*HXI;
+                TAUY = (TAUYYT-TAUYYB)*HYI;
+                TAUZ = (TAUYZU-TAUYZD)*HZI;
+                // random flux
+                TAURANX = (RANSXY[i+1][j  ][k  ]-RANSXY[i  ][j  ][k  ])/hc[i];   //*HXI;
+                TAURANY = (RANSYY[i  ][j+1][k  ]-RANSYY[i  ][j  ][k  ])*HYI;
+                TAURANZ = (RANSYZ[i  ][j  ][k+1]-RANSYZ[i  ][j  ][k  ])*HZI;
+
+                // FH-force
+                fyc[i][j][k]  = -FX-FY-FZ-QQ+TAUX+TAUY+TAUZ+TAURANX+TAURANY+TAURANZ;
+
+                // ---------------------------------------------------------------------------
+                // Uy =
+                uycn[i][j][k] = ( roc[i][j][k]*uyc[i][j][k] + 0.5*DT*(fyc[i][j][k]) ) /rocn[i][j][k];
+
+        // ----------------- Z direction --------------------------------------------------------------------------------------------------
+                FX = ( rox[i+1][j  ][k  ]*uxx[i+1][j  ][k  ]*uzx[i+1][j  ][k  ] - rox[i][j][k]*uxx[i][j][k]*uzx[i][j][k] ) /hc[i];   //*HXI;
+                FY = ( roy[i  ][j+1][k  ]*uyy[i  ][j+1][k  ]*uzy[i  ][j+1][k  ] - roy[i][j][k]*uyy[i][j][k]*uzy[i][j][k] ) *HYI;
+                FZ = ( roz[i  ][j  ][k+1]*uzz[i  ][j  ][k+1]*uzz[i  ][j  ][k+1] - roz[i][j][k]*uzz[i][j][k]*uzz[i][j][k] ) *HZI;
+                // ---------------------------------------------------------------------------
+                QQ = (pz[i  ][j  ][k+1]-pz[i][j][k])*HZI;
+                // ---------------------------------------------------------------------------
+
+                DuzDX_CLC = (uzc[i  ][j  ][k  ]-uzc[i-1][j  ][k  ])/((hc[i-1] + hc[i])*0.5);    //*HXI;
+                DuzDX_RCC = (uzc[i+1][j  ][k  ]-uzc[i  ][j  ][k  ])/((hc[i] + hc[i+1])*0.5);    //*HXI;
+                DuxDZ_UDL = (uxc[i-1][j  ][k+1]-uxc[i-1][j  ][k-1])*0.5*HZI;
+                DuxDZ_UDC = (uxc[i  ][j  ][k+1]-uxc[i  ][j  ][k-1])*0.5*HZI;
+                DuxDZ_UDR = (uxc[i+1][j  ][k+1]-uxc[i+1][j  ][k-1])*0.5*HZI;
+
+                DuzDY_CBC = (uzc[i  ][j  ][k  ]-uzc[i  ][j-1][k  ])*HYI;
+                DuzDY_TCC = (uzc[i  ][j+1][k  ]-uzc[i  ][j  ][k  ])*HYI;
+                DuyDZ_UDB = (uyc[i  ][j-1][k+1]-uyc[i  ][j-1][k-1])*0.5*HZI;
+                DuyDZ_UDC = (uyc[i  ][j  ][k+1]-uyc[i  ][j  ][k-1])*0.5*HZI;
+                DuyDZ_UDT = (uyc[i  ][j+1][k+1]-uyc[i  ][j+1][k-1])*0.5*HZI;
+
+                DuzDZ_CDC = (uzc[i  ][j  ][k  ]-uzc[i  ][j  ][k-1])*HZI;
+                DuzDZ_UCC = (uzc[i  ][j  ][k+1]-uzc[i  ][j  ][k  ])*HZI;
+                DuxDX_RLD = (uxc[i+1][j  ][k-1]-uxc[i-1][j  ][k-1])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
+                DuxDX_RLC = (uxc[i+1][j  ][k  ]-uxc[i-1][j  ][k  ])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
+                DuxDX_RLU = (uxc[i+1][j  ][k+1]-uxc[i-1][j  ][k+1])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
+                DuyDY_TBD = (uyc[i  ][j+1][k-1]-uyc[i  ][j-1][k-1])*0.5*HYI;
+                DuyDY_TBC = (uyc[i  ][j+1][k  ]-uyc[i  ][j-1][k  ])*0.5*HYI;
+                DuyDY_TBU = (uyc[i  ][j+1][k+1]-uyc[i  ][j-1][k+1])*0.5*HYI;
+
+
+                TAUZXL = mu0*(      DuzDX_CLC +       (0.5*(DuxDZ_UDC+DuxDZ_UDL)                            ));
+                TAUZXR = mu0*(      DuzDX_RCC +       (0.5*(DuxDZ_UDC+DuxDZ_UDR)                            ));
+                TAUZYB = mu0*(      DuzDY_CBC +       (0.5*(DuyDZ_UDC+DuyDZ_UDB)                            ));
+                TAUZYT = mu0*(      DuzDY_TCC +       (0.5*(DuyDZ_UDC+DuyDZ_UDT)                            ));
+                TAUZZD = mu0*(VISC1*DuzDZ_CDC + VISC2*(0.5*(DuxDX_RLC+DuxDX_RLD)+0.5*(DuyDY_TBC+DuyDY_TBD)));
+                TAUZZU = mu0*(VISC1*DuzDZ_UCC + VISC2*(0.5*(DuxDX_RLU+DuxDX_RLC)+0.5*(DuyDY_TBU+DuyDY_TBC)));
+
+                // viscous stress
+                TAUX = (TAUZXR-TAUZXL)/hc[i];   //*HXI;
+                TAUY = (TAUZYT-TAUZYB)*HYI;
+                TAUZ = (TAUZZU-TAUZZD)*HZI;
+                // random flux
+                TAURANX = (RANSXZ[i+1][j  ][k  ]-RANSXZ[i  ][j  ][k  ])/hc[i];   //*HXI;
+                TAURANY = (RANSYZ[i  ][j+1][k  ]-RANSYZ[i  ][j  ][k  ])*HYI;
+                TAURANZ = (RANSZZ[i  ][j  ][k+1]-RANSZZ[i  ][j  ][k  ])*HZI;
+
+                // FH-force
+                fzc[i][j][k]  = -FX-FY-FZ-QQ+TAUX+TAUY+TAUZ+TAURANX+TAURANY+TAURANZ;
+
+                // ---------------------------------------------------------------------------
+                // Uz =
+                uzcn[i][j][k] = ( roc[i][j][k]*uzc[i][j][k] + 0.5*DT*(fzc[i][j][k]) ) /rocn[i][j][k];
+
+            // [================ PRESSURE ========================================================
+                // equation of state
+
+                if(fh_EOS == hmd_EOS_ARGON)
+                    pcn[i][j][k] = D*(1./3.*A*A*pow(E*rocn[i][j][k]-B,3)+C);
+                else if(fh_EOS == hmd_EOS_SPC)
+                    pcn[i][j][k] = rocn[i][j][k]*(rocn[i][j][k]*A+B)+C;
+                else {
+                    printf("\nERROR in FHLJModel3D - unknown EOS\n\n");
+                    exit(3);
+                }
+
+            // ==================================================================================]
+            }
+        }
+    }
+
+    */
 
 }
 
@@ -173,7 +394,7 @@ void collect_statistics(FHMD *fh)
 
     for(int i = 0; i < fh->Ntot; i++)
     {
-        RHO_AVG  += arr[i].ro_fh - fh->FH_dens;
+        RHO_AVG  += arr[i].ro_fh;
         RHO2_AVG += (arr[i].ro_fh - fh->FH_dens)*(arr[i].ro_fh - fh->FH_dens);
         P_AVG    += arr[i].p;
         N_AVG++;
@@ -184,6 +405,26 @@ void collect_statistics(FHMD *fh)
             U2_AVG[d] += arr[i].u_fh[d]*arr[i].u_fh[d];
         }
     }
+}
+
+
+void update_statistics(FHMD *fh)
+{
+    const double DN_AVG   = (double)(N_AVG);
+
+    avg_rho = RHO_AVG/DN_AVG;
+    avg_p   = P_AVG/DN_AVG;
+    std_rho = sqrt(fabs(RHO2_AVG/DN_AVG));
+
+    for(int d = 0; d < DIM; d++)
+    {
+        avg_u[d]     = U_AVG[d]/DN_AVG;
+        std_u[d]     = sqrt(fabs(U2_AVG[d] - avg_u[d]*avg_u[d]));
+        avg_sound[d] = fh->FH_dens*std_u[d]/(std_rho + 1.e-20);
+    }
+
+    sound = (avg_sound[0] + avg_sound[1] + avg_sound[2])/3.;
+    avg_T = T_AVG/(double)(NT_AVG);
 }
 
 
@@ -201,52 +442,40 @@ void FH_do_single_timestep(FHMD *fh)
 
 void FH_equilibrate(FHMD *fh)
 {
-    const double std_rho = sqrt(fh->FH_temp*fh->FH_dens*FHMD_kB/(fh->box_volume/(double)(fh->Ntot)))/SOUND;
-    const double std_u   = sqrt(fh->FH_temp*FHMD_kB/(fh->FH_dens*(fh->box_volume/(double)(fh->Ntot))));
+    const double STD_RHO  = sqrt(fh->FH_temp*fh->FH_dens*FHMD_kB/(fh->box_volume/(double)(fh->Ntot)))/SOUND;
+    const double STD_U    = sqrt(fh->FH_temp*FHMD_kB/(fh->FH_dens*fh->box_volume/(double)(fh->Ntot)));
+    const int    N_OUTPUT = 1000;
 
-    printf(MAKE_BLUE "\nFHMD: FH equilibration in process...\n");
-    printf("%8s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
-           "Step", "STD rho", "STD Ux", "STD Uy", "STD Uz", "Sound, m/s", "T, K", "<T>, K", "<rho>", "<P>", "<Ux>", "<Uy>", "<Uz>");
-    printf("------------------------------------------------------------------------------------------------------------------------------------------------\n");
-    printf("->       %10.3f %10.5f %10.5f %10.5f %10.5f %10.5f %10.5f       <- Theoretical Values\n",
-           std_rho, std_u, std_u, std_u, SOUND, fh->FH_temp, fh->FH_temp, fh->FH_dens);
+    printf(MAKE_BLUE "FHMD: FH equilibration in process...\n\n");
+    printf("%8s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %6s\n",
+           "Step", "STD rho", "STD Ux", "STD Uy", "STD Uz", "C_s, m/s", "T, K", "<T>, K", "<rho>", "<P>", "<Ux>", "<Uy>", "<Uz>", "blend");
+    printf("---------------------------------------------------------------------------------------------------------------------------------------\n");
+    printf(MAKE_LIGHT_BLUE "->       %9.4f %9.5f %9.5f %9.5f %9.3f %9.4f %9.4f %9.4f %9.4f      <- Theoretical Values",
+           STD_RHO, STD_U, STD_U, STD_U, SOUND*1000.0, fh->FH_temp, fh->FH_temp, fh->FH_dens, P_INIT);
+    printf(MAKE_BLUE "\n");
 
+    while(STEP <= fh->FH_equil)
+    {
+        collect_statistics(fh);
 
-
-        while(ni<nsteps)
+        if(!(STEP % N_OUTPUT))
         {
-        // =============================================================================================
-            Collect_Statistics();
-        // =============================================================================================
-            if(IC%NOUTPUT==0)
-            {
-            //    AVGVARRHO = sqrt(fabs((SUMVARRHO/NMEAN-(MEANRHO/NMEAN)*(MEANRHO/NMEAN))));
-                AVGVARRHO = sqrt(fabs((SUMVARRHO/NMEAN)));
-                AVGVARUX  = sqrt(fabs(SUMVARUX/NMEAN-(MEANUX/NMEAN)*(MEANUX/NMEAN)));
-                AVGVARUY  = sqrt(fabs(SUMVARUY/NMEAN-(MEANUY/NMEAN)*(MEANUY/NMEAN)));
-                AVGVARUZ  = sqrt(fabs(SUMVARUZ/NMEAN-(MEANUZ/NMEAN)*(MEANUZ/NMEAN)));
-                AVGSOUNDX     = RO_INIT*AVGVARUX/(1e-20+AVGVARRHO);
-                AVGSOUNDY     = RO_INIT*AVGVARUY/(1e-20+AVGVARRHO);
-                AVGSOUNDZ     = RO_INIT*AVGVARUZ/(1e-20+AVGVARRHO);
+            update_statistics(fh);
 
-                if(bverbose)
-                {
-                    printf( "\r%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f,%10.5f", AVGVARRHO, AVGVARUX, AVGVARUY, AVGVARUZ,
-                                                (AVGSOUNDX+AVGSOUNDY+AVGSOUNDZ)/3,TINST/(N1-1)/(N2-1)/(N3-1),TAVG/(1e-20+NTAVG),Fblend);
-                    fflush(stdout);
-                }
-            }
-        // =============================================================================================
-            work_single_timestep();
-        // =============================================================================================
+            printf("\r%8d %9.4f %9.5f %9.5f %9.5f %9.3f %9.4f %9.4f %9.4f %9.4f %9.5f %9.5f %9.5f %6.4f",
+                   STEP, std_rho, std_u[0], std_u[1], std_u[2], sound*1000.0, T_INST/(double)(fh->Ntot), avg_T,
+                   avg_rho, avg_p, avg_u[0], avg_u[1], avg_u[2], blend);
 
-            IC = IC+1;
-            ni+=1;
-            T  = T+DT;
-            T_local += DT;
+            fflush(stdout);
         }
 
+        FH_do_single_timestep(fh);
 
+        T += fh->dt_FH;
+        STEP++;
+    }
+
+    printf("\n---------------------------------------------------------------------------------------------------------------------------------------\n");
     printf(RESET_COLOR "\n");
     fflush(stdout);
 }
@@ -741,211 +970,7 @@ void CHARZ()
 // ===========================================================================================================
 void balans0()
 {
-    int i,j,k;
-    double FX,FY,FZ,QQ,TAUX,TAUY,TAUZ,TAURANX,TAURANY,TAURANZ;
-    double TAUXXR,TAUXXL,TAUXYT,TAUXYB,TAUXZU,TAUXZD;
-    double TAUYXR,TAUYXL,TAUYYT,TAUYYB,TAUYZU,TAUYZD;
-    double TAUZXR,TAUZXL,TAUZYT,TAUZYB,TAUZZU,TAUZZD;
-    double DuxDX_CLC,DuxDX_RCC,DuxDX_RLC,DuxDX_RLB,DuxDX_RLT,DuxDX_RLD,DuxDX_RLU;
-    double DuyDX_CLC,DuyDX_RCC,DuyDX_RLC,DuyDX_RLB,DuyDX_RLT;
-    double DuzDX_CLC,DuzDX_RCC,DuzDX_RLC,DuzDX_RLD,DuzDX_RLU;
-    double DuxDY_TBC,DuxDY_TBL,DuxDY_TBR,DuxDY_CBC,DuxDY_TCC;
-    double DuyDY_TBC,DuyDY_TBL,DuyDY_TBR,DuyDY_CBC,DuyDY_TCC,DuyDY_TBD,DuyDY_TBU;
-    double DuzDY_CBC,DuzDY_TCC,DuzDY_TBC,DuzDY_TBD,DuzDY_TBU;
-    double DuxDZ_UDC,DuxDZ_UDL,DuxDZ_UDR,DuxDZ_CDC,DuxDZ_UCC;
-    double DuyDZ_CDC,DuyDZ_UCC,DuyDZ_UDC,DuyDZ_UDB,DuyDZ_UDT;
-    double DuzDZ_UDC,DuzDZ_UDL,DuzDZ_UDR,DuzDZ_UDB,DuzDZ_UDT,DuzDZ_CDC,DuzDZ_UCC;
 
-    for(k=1; k<=N3-1; k++)
-    {
-        for(j=1; j<=N2-1; j++)
-        {
-            for(i=1; i<=N1-1; i++)
-            {
-        // ========= [mass conservation ===================================================================================================
-                // density flux
-                FX  = ( rox[i+1][j  ][k  ]*uxx[i+1][j  ][k  ] - rox[i][j][k]*uxx[i][j][k] ) /hc[i];   //*HXI;
-                FY  = ( roy[i  ][j+1][k  ]*uyy[i  ][j+1][k  ] - roy[i][j][k]*uyy[i][j][k] ) *HYI;
-                FZ  = ( roz[i  ][j  ][k+1]*uzz[i  ][j  ][k+1] - roz[i][j][k]*uzz[i][j][k] ) *HZI;
-
-                // integration in time
-                rocn[i][j][k] = roc[i][j][k] - 0.5*DT*(FX+FY+FZ);
-
-        // ========= [momentum conservation ===============================================================================================
-        // ----------------- X direction --------------------------------------------------------------------------------------------------
-                // momentum flux
-                FX  = ( rox[i+1][j  ][k  ]*uxx[i+1][j  ][k  ]*uxx[i+1][j  ][k  ] - rox[i][j][k]*uxx[i][j][k]*uxx[i][j][k] ) /hc[i];   //*HXI;
-                FY  = ( roy[i  ][j+1][k  ]*uyy[i  ][j+1][k  ]*uxy[i  ][j+1][k  ] - roy[i][j][k]*uyy[i][j][k]*uxy[i][j][k] ) *HYI;
-                FZ  = ( roz[i  ][j  ][k+1]*uzz[i  ][j  ][k+1]*uxz[i  ][j  ][k+1] - roz[i][j][k]*uzz[i][j][k]*uxz[i][j][k] ) *HZI;
-
-                // pressure flux
-                QQ = (px[i+1][j  ][k  ]-px[i][j][k]) /hc[i];    //*HXI;
-                // viscous flux
-                DuxDX_RCC = (uxc[i+1][j  ][k  ]-uxc[i  ][j  ][k  ])/((hc[i+1] + hc[i])*0.5);    //*HXI;
-                DuxDX_CLC = (uxc[i  ][j  ][k  ]-uxc[i-1][j  ][k  ])/((hc[i] + hc[i-1])*0.5);    //*HXI;
-                DuyDY_TBR = (uyc[i+1][j+1][k  ]-uyc[i+1][j-1][k  ])*0.5*HYI;
-                DuyDY_TBC = (uyc[i  ][j+1][k  ]-uyc[i  ][j-1][k  ])*0.5*HYI;
-                DuyDY_TBL = (uyc[i-1][j+1][k  ]-uyc[i-1][j-1][k  ])*0.5*HYI;
-                DuzDZ_UDC = (uzc[i  ][j  ][k+1]-uzc[i  ][j  ][k-1])*0.5*HZI;
-                DuzDZ_UDR = (uzc[i+1][j  ][k+1]-uzc[i+1][j  ][k-1])*0.5*HZI;
-                DuzDZ_UDL = (uzc[i-1][j  ][k+1]-uzc[i-1][j  ][k-1])*0.5*HZI;
-
-                DuxDY_TCC = (uxc[i  ][j+1][k  ]-uxc[i  ][j  ][k  ])*HYI;
-                DuxDY_CBC = (uxc[i  ][j  ][k  ]-uxc[i  ][j-1][k  ])*HYI;
-                DuyDX_RLC = (uyc[i+1][j  ][k  ]-uyc[i-1][j  ][k  ])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
-                DuyDX_RLT = (uyc[i+1][j+1][k  ]-uyc[i-1][j+1][k  ])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
-                DuyDX_RLB = (uyc[i+1][j-1][k  ]-uyc[i-1][j-1][k  ])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
-
-                DuxDZ_CDC = (uxc[i  ][j  ][k  ]-uxc[i  ][j  ][k-1])*HZI;
-                DuxDZ_UCC = (uxc[i  ][j  ][k+1]-uxc[i  ][j  ][k  ])*HZI;
-                DuzDX_RLC = (uzc[i+1][j  ][k  ]-uzc[i-1][j  ][k  ])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
-                DuzDX_RLU = (uzc[i+1][j  ][k+1]-uzc[i-1][j  ][k+1])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
-                DuzDX_RLD = (uzc[i+1][j  ][k-1]-uzc[i-1][j  ][k-1])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
-
-                TAUXXR = mu0*(VISC1*DuxDX_RCC + VISC2*(0.5*(DuyDY_TBR+DuyDY_TBC)+0.5*(DuzDZ_UDR+DuzDZ_UDC)));
-                TAUXXL = mu0*(VISC1*DuxDX_CLC + VISC2*(0.5*(DuyDY_TBC+DuyDY_TBL)+0.5*(DuzDZ_UDC+DuzDZ_UDL)));
-                TAUXYT = mu0*(      DuxDY_TCC +       (0.5*(DuyDX_RLC+DuyDX_RLT)                            ));
-                TAUXYB = mu0*(      DuxDY_CBC +       (0.5*(DuyDX_RLC+DuyDX_RLB)                            ));
-                TAUXZU = mu0*(      DuxDZ_UCC +       (0.5*(DuzDX_RLC+DuzDX_RLU)                            ));
-                TAUXZD = mu0*(      DuxDZ_CDC +       (0.5*(DuzDX_RLC+DuzDX_RLD)                            ));
-
-                // Viscous stress
-                TAUX = (TAUXXR-TAUXXL)/hc[i];   //*HXI;
-                TAUY = (TAUXYT-TAUXYB)*HYI;
-                TAUZ = (TAUXZU-TAUXZD)*HZI;
-                // random stress
-                TAURANX = (RANSXX[i+1][j  ][k  ]-RANSXX[i  ][j  ][k  ])/hc[i];   //*HXI;
-                TAURANY = (RANSXY[i  ][j+1][k  ]-RANSXY[i  ][j  ][k  ])*HYI;
-                TAURANZ = (RANSXZ[i  ][j  ][k+1]-RANSXZ[i  ][j  ][k  ])*HZI;
-
-                // FH-force
-                fxc[i][j][k]  = -FX-FY-FZ-QQ+TAUX+TAUY+TAUZ+TAURANX+TAURANY+TAURANZ;
-
-                // integration in time
-                uxcn[i][j][k] = ( roc[i][j][k]*uxc[i][j][k] + 0.5*DT*(fxc[i][j][k]) ) /rocn[i][j][k];
-                // -------------------------------------------------------------------------------
-
-        // ----------------- Y direction --------------------------------------------------------------------------------------------------
-                FX = ( rox[i+1][j  ][k  ]*uxx[i+1][j  ][k  ]*uyx[i+1][j  ][k  ] - rox[i][j][k]*uxx[i][j][k]*uyx[i][j][k] ) /hc[i];   //*HXI;
-                FY = ( roy[i  ][j+1][k  ]*uyy[i  ][j+1][k  ]*uyy[i  ][j+1][k  ] - roy[i][j][k]*uyy[i][j][k]*uyy[i][j][k] ) *HYI;
-                FZ = ( roz[i  ][j  ][k+1]*uzz[i  ][j  ][k+1]*uyz[i  ][j  ][k+1] - roz[i][j][k]*uzz[i][j][k]*uyz[i][j][k] ) *HZI;
-                // ---------------------------------------------------------------------------
-                QQ = (py[i  ][j+1][k  ]-py[i][j][k])*HYI;
-                // ---------------------------------------------------------------------------
-
-                DuyDX_RCC = (uyc[i+1][j  ][k  ]-uyc[i  ][j  ][k  ])/((hc[i+1] + hc[i])*0.5);    //*HXI;
-                DuyDX_CLC = (uyc[i  ][j  ][k  ]-uyc[i-1][j  ][k  ])/((hc[i] + hc[i-1])*0.5);    //*HXI;
-                DuxDY_TBR = (uxc[i+1][j+1][k  ]-uxc[i+1][j-1][k  ])*0.5*HYI;
-                DuxDY_TBC = (uxc[i  ][j+1][k  ]-uxc[i  ][j-1][k  ])*0.5*HYI;
-                DuxDY_TBL = (uxc[i-1][j+1][k  ]-uxc[i-1][j-1][k  ])*0.5*HYI;
-
-                DuyDY_TCC = (uyc[i  ][j+1][k  ]-uyc[i  ][j  ][k  ])*HYI;
-                DuyDY_CBC = (uyc[i  ][j  ][k  ]-uyc[i  ][j-1][k  ])*HYI ;
-                DuxDX_RLT = (uxc[i+1][j+1][k  ]-uxc[i-1][j+1][k  ])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
-                DuxDX_RLC = (uxc[i+1][j  ][k  ]-uxc[i-1][j  ][k  ])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
-                DuxDX_RLB = (uxc[i+1][j-1][k  ]-uxc[i-1][j-1][k  ])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
-                DuzDZ_UDT = (uzc[i  ][j+1][k+1]-uzc[i  ][j+1][k-1])*0.5*HZI;
-                DuzDZ_UDC = (uzc[i  ][j  ][k+1]-uzc[i  ][j  ][k-1])*0.5*HZI;
-                DuzDZ_UDB = (uzc[i  ][j-1][k+1]-uzc[i  ][j-1][k-1])*0.5*HZI;
-
-                DuyDZ_UCC = (uyc[i  ][j  ][k+1]-uyc[i  ][j  ][k  ])*HZI;
-                DuyDZ_CDC = (uyc[i  ][j  ][k  ]-uyc[i  ][j  ][k-1])*HZI;
-                DuzDY_TBU = (uzc[i  ][j+1][k+1]-uzc[i  ][j-1][k+1])*0.5*HYI;
-                DuzDY_TBC = (uzc[i  ][j+1][k  ]-uzc[i  ][j-1][k  ])*0.5*HYI;
-                DuzDY_TBD = (uzc[i  ][j+1][k-1]-uzc[i  ][j-1][k-1])*0.5*HYI;
-
-                TAUYXR = mu0*(      DuyDX_RCC +       (0.5*(DuxDY_TBR+DuxDY_TBC)                            ));
-                TAUYXL = mu0*(      DuyDX_CLC +       (0.5*(DuxDY_TBL+DuxDY_TBC)                            ));
-                TAUYYT = mu0*(VISC1*DuyDY_TCC + VISC2*(0.5*(DuxDX_RLT+DuxDX_RLC)+0.5*(DuzDZ_UDT+DuzDZ_UDC)));
-                TAUYYB = mu0*(VISC1*DuyDY_CBC + VISC2*(0.5*(DuxDX_RLC+DuxDX_RLB)+0.5*(DuzDZ_UDC+DuzDZ_UDB)));
-                TAUYZD = mu0*(      DuyDZ_CDC +       (0.5*(DuzDY_TBC+DuzDY_TBD)                            ));
-                TAUYZU = mu0*(      DuyDZ_UCC +       (0.5*(DuzDY_TBC+DuzDY_TBU)                            ));
-
-                // viscous stress
-                TAUX = (TAUYXR-TAUYXL)/hc[i];   //*HXI;
-                TAUY = (TAUYYT-TAUYYB)*HYI;
-                TAUZ = (TAUYZU-TAUYZD)*HZI;
-                // random flux
-                TAURANX = (RANSXY[i+1][j  ][k  ]-RANSXY[i  ][j  ][k  ])/hc[i];   //*HXI;
-                TAURANY = (RANSYY[i  ][j+1][k  ]-RANSYY[i  ][j  ][k  ])*HYI;
-                TAURANZ = (RANSYZ[i  ][j  ][k+1]-RANSYZ[i  ][j  ][k  ])*HZI;
-
-                // FH-force
-                fyc[i][j][k]  = -FX-FY-FZ-QQ+TAUX+TAUY+TAUZ+TAURANX+TAURANY+TAURANZ;
-
-                // ---------------------------------------------------------------------------
-                // Uy =
-                uycn[i][j][k] = ( roc[i][j][k]*uyc[i][j][k] + 0.5*DT*(fyc[i][j][k]) ) /rocn[i][j][k];
-
-        // ----------------- Z direction --------------------------------------------------------------------------------------------------
-                FX = ( rox[i+1][j  ][k  ]*uxx[i+1][j  ][k  ]*uzx[i+1][j  ][k  ] - rox[i][j][k]*uxx[i][j][k]*uzx[i][j][k] ) /hc[i];   //*HXI;
-                FY = ( roy[i  ][j+1][k  ]*uyy[i  ][j+1][k  ]*uzy[i  ][j+1][k  ] - roy[i][j][k]*uyy[i][j][k]*uzy[i][j][k] ) *HYI;
-                FZ = ( roz[i  ][j  ][k+1]*uzz[i  ][j  ][k+1]*uzz[i  ][j  ][k+1] - roz[i][j][k]*uzz[i][j][k]*uzz[i][j][k] ) *HZI;
-                // ---------------------------------------------------------------------------
-                QQ = (pz[i  ][j  ][k+1]-pz[i][j][k])*HZI;
-                // ---------------------------------------------------------------------------
-
-                DuzDX_CLC = (uzc[i  ][j  ][k  ]-uzc[i-1][j  ][k  ])/((hc[i-1] + hc[i])*0.5);    //*HXI;
-                DuzDX_RCC = (uzc[i+1][j  ][k  ]-uzc[i  ][j  ][k  ])/((hc[i] + hc[i+1])*0.5);    //*HXI;
-                DuxDZ_UDL = (uxc[i-1][j  ][k+1]-uxc[i-1][j  ][k-1])*0.5*HZI;
-                DuxDZ_UDC = (uxc[i  ][j  ][k+1]-uxc[i  ][j  ][k-1])*0.5*HZI;
-                DuxDZ_UDR = (uxc[i+1][j  ][k+1]-uxc[i+1][j  ][k-1])*0.5*HZI;
-
-                DuzDY_CBC = (uzc[i  ][j  ][k  ]-uzc[i  ][j-1][k  ])*HYI;
-                DuzDY_TCC = (uzc[i  ][j+1][k  ]-uzc[i  ][j  ][k  ])*HYI;
-                DuyDZ_UDB = (uyc[i  ][j-1][k+1]-uyc[i  ][j-1][k-1])*0.5*HZI;
-                DuyDZ_UDC = (uyc[i  ][j  ][k+1]-uyc[i  ][j  ][k-1])*0.5*HZI;
-                DuyDZ_UDT = (uyc[i  ][j+1][k+1]-uyc[i  ][j+1][k-1])*0.5*HZI;
-
-                DuzDZ_CDC = (uzc[i  ][j  ][k  ]-uzc[i  ][j  ][k-1])*HZI;
-                DuzDZ_UCC = (uzc[i  ][j  ][k+1]-uzc[i  ][j  ][k  ])*HZI;
-                DuxDX_RLD = (uxc[i+1][j  ][k-1]-uxc[i-1][j  ][k-1])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
-                DuxDX_RLC = (uxc[i+1][j  ][k  ]-uxc[i-1][j  ][k  ])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
-                DuxDX_RLU = (uxc[i+1][j  ][k+1]-uxc[i-1][j  ][k+1])/((hc[i+1] + hc[i-1])*0.5 + hc[i]);    //*0.5*HXI;
-                DuyDY_TBD = (uyc[i  ][j+1][k-1]-uyc[i  ][j-1][k-1])*0.5*HYI;
-                DuyDY_TBC = (uyc[i  ][j+1][k  ]-uyc[i  ][j-1][k  ])*0.5*HYI;
-                DuyDY_TBU = (uyc[i  ][j+1][k+1]-uyc[i  ][j-1][k+1])*0.5*HYI;
-
-
-                TAUZXL = mu0*(      DuzDX_CLC +       (0.5*(DuxDZ_UDC+DuxDZ_UDL)                            ));
-                TAUZXR = mu0*(      DuzDX_RCC +       (0.5*(DuxDZ_UDC+DuxDZ_UDR)                            ));
-                TAUZYB = mu0*(      DuzDY_CBC +       (0.5*(DuyDZ_UDC+DuyDZ_UDB)                            ));
-                TAUZYT = mu0*(      DuzDY_TCC +       (0.5*(DuyDZ_UDC+DuyDZ_UDT)                            ));
-                TAUZZD = mu0*(VISC1*DuzDZ_CDC + VISC2*(0.5*(DuxDX_RLC+DuxDX_RLD)+0.5*(DuyDY_TBC+DuyDY_TBD)));
-                TAUZZU = mu0*(VISC1*DuzDZ_UCC + VISC2*(0.5*(DuxDX_RLU+DuxDX_RLC)+0.5*(DuyDY_TBU+DuyDY_TBC)));
-
-                // viscous stress
-                TAUX = (TAUZXR-TAUZXL)/hc[i];   //*HXI;
-                TAUY = (TAUZYT-TAUZYB)*HYI;
-                TAUZ = (TAUZZU-TAUZZD)*HZI;
-                // random flux
-                TAURANX = (RANSXZ[i+1][j  ][k  ]-RANSXZ[i  ][j  ][k  ])/hc[i];   //*HXI;
-                TAURANY = (RANSYZ[i  ][j+1][k  ]-RANSYZ[i  ][j  ][k  ])*HYI;
-                TAURANZ = (RANSZZ[i  ][j  ][k+1]-RANSZZ[i  ][j  ][k  ])*HZI;
-
-                // FH-force
-                fzc[i][j][k]  = -FX-FY-FZ-QQ+TAUX+TAUY+TAUZ+TAURANX+TAURANY+TAURANZ;
-
-                // ---------------------------------------------------------------------------
-                // Uz =
-                uzcn[i][j][k] = ( roc[i][j][k]*uzc[i][j][k] + 0.5*DT*(fzc[i][j][k]) ) /rocn[i][j][k];
-
-            // [================ PRESSURE ========================================================
-                // equation of state
-
-                if(fh_EOS == hmd_EOS_ARGON)
-                    pcn[i][j][k] = D*(1./3.*A*A*pow(E*rocn[i][j][k]-B,3)+C);
-                else if(fh_EOS == hmd_EOS_SPC)
-                    pcn[i][j][k] = rocn[i][j][k]*(rocn[i][j][k]*A+B)+C;
-                else {
-                    printf("\nERROR in FHLJModel3D - unknown EOS\n\n");
-                    exit(3);
-                }
-
-            // ==================================================================================]
-            }
-        }
-    }
 }
 // ===========================================================================================================
 
