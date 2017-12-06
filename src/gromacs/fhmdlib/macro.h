@@ -8,7 +8,13 @@
 #define NZ      fh->N[2]                /* Number of FH cells along Z axis */
 
 #define C       I(ind, fh->N)           /* Point [i][j][k] */
+#define L       I(ind, fh->N)           /* Point [i][j][k] */
+#define R       I3d(i,j,k,+1,d,fh->N)   /* Point [i+1][j][k] */
 
+#define L0      I3b(i,j,k,-1,d,fh->N)   /* Point [-1][j][k] */
+#define L1      I3b(i,j,k,0,d,fh->N)    /* Point [0][j][k] */
+
+#define SUM(f)  (f[0] + f[1] + f[2])
 
 #define ASSIGN_IND(ind, i, j, k) \
     ind[0] = i; \
@@ -55,6 +61,48 @@ static int I3(const int i, const int j, const int k, const ivec N)
     ivec ind;
 
     ASSIGN_IND(ind, i, j, k);
+
+    return I(ind, N);
+}
+
+
+static int I3d(const int i, const int j, const int k, const int dir, const int d, const ivec N)
+{
+    ivec ind;
+
+    switch(d)
+    {
+    case 0:
+        ASSIGN_IND(ind, i+dir, j, k);
+        break;
+    case 1:
+        ASSIGN_IND(ind, i, j+dir, k);
+        break;
+    case 2:
+        ASSIGN_IND(ind, i, j, k+dir);
+        break;
+    }
+
+    return I(ind, N);
+}
+
+
+static int I3b(const int i, const int j, const int k, const int index, const int d, const ivec N)
+{
+    ivec ind;
+
+    switch(d)
+    {
+    case 0:
+        ASSIGN_IND(ind, index, j, k);
+        break;
+    case 1:
+        ASSIGN_IND(ind, i, index, k);
+        break;
+    case 2:
+        ASSIGN_IND(ind, i, j, index);
+        break;
+    }
 
     return I(ind, N);
 }

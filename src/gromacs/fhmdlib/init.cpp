@@ -85,7 +85,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
 
         fh->box_volume = fh->box[0]*fh->box[1]*fh->box[2];
 
-        printf("FHMD: MD/FH box size: %g x %g x %g\n", fh->box[0], fh->box[1], fh->box[2]);
+        printf("FHMD: MD/FH box size: %g x %g x %g [nm]\n", fh->box[0], fh->box[1], fh->box[2]);
         printf("FHMD: FH grid size:   %d x %d x %d\n", fh->N[0], fh->N[1], fh->N[2]);
         fprintf(fw, "Nx = %d              ; Number of FH cells along X axis\n", fh->N[0]);
         fprintf(fw, "Ny = %d              ; Number of FH cells along Y axis\n", fh->N[1]);

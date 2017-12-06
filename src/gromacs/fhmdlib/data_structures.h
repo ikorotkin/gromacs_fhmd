@@ -30,8 +30,8 @@ typedef struct FH_arrays        /* FH/MD arrays */
     dvec        m_star, mn_star;        /* m star */
 
     double      p, pn;                  /* FH pressure */
-    dvec        rox, roxn, px, pxn;     /* FH flux variables */
-    matrix      ux, uxn;                /* FH flux velocities */
+    dvec        rof, rofn, pf, pfn;     /* FH flux variables */
+    matrix      uf, ufn;                /* FH flux velocities */
     double      ro_fh_n;                /* FH density (new time layer) */
     dvec        u_fh_n;                 /* FH velocity (new time layer) */
     matrix      rans;                   /* FH random stress */
