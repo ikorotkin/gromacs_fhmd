@@ -10,9 +10,11 @@
 #define C       I(ind, fh->N)           /* Point [i][j][k] */
 #define L       I(ind, fh->N)           /* Point [i][j][k] */
 #define R       I3d(i,j,k,+1,d,fh->N)   /* Point [i+1][j][k] */
+#define CL      I3d(i,j,k,-1,d,fh->N)   /* Point [i-1][j][k] */
+#define CR      I3d(i,j,k,+1,d,fh->N)   /* Point [i+1][j][k] */
 
-#define L0      I3b(i,j,k,-1,d,fh->N)   /* Point [-1][j][k] */
-#define L1      I3b(i,j,k,0,d,fh->N)    /* Point [0][j][k] */
+#define L0      I3b(-1,j,k,d,fh->N)     /* Point [-1][j][k] */
+#define L1      I3b( 0,j,k,d,fh->N)     /* Point [0][j][k] */
 
 #define SUM(f)  (f[0] + f[1] + f[2])
 
@@ -87,7 +89,7 @@ static int I3d(const int i, const int j, const int k, const int dir, const int d
 }
 
 
-static int I3b(const int i, const int j, const int k, const int index, const int d, const ivec N)
+static int I3b(const int index, const int j, const int k, const int d, const ivec N)
 {
     ivec ind;
 
@@ -97,10 +99,10 @@ static int I3b(const int i, const int j, const int k, const int index, const int
         ASSIGN_IND(ind, index, j, k);
         break;
     case 1:
-        ASSIGN_IND(ind, i, index, k);
+        ASSIGN_IND(ind, j, index, k);   // !!! TODO: Order!
         break;
     case 2:
-        ASSIGN_IND(ind, i, j, index);
+        ASSIGN_IND(ind, j, k, index);
         break;
     }
 
