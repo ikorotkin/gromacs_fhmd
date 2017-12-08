@@ -61,8 +61,8 @@ void FH_init(FHMD *fh)
     T        = 0;       // Current time
     STEP     = 0;       // Current time step
 
-    if(FHMD_BLENDING >= 0)
-        blend = FHMD_BLENDING;
+    if(fh->FH_blend >= 0)
+        blend = fh->FH_blend;
 
     // Reset statistics
     T_AVG    = 0;
@@ -221,8 +221,8 @@ void FH_char(FHMD *fh)
     const double RO1 = 1.0/fh->FH_dens;
     const double DT  = fh->dt_FH;
 
-    ivec ind;
-    int  dn;
+    ivec ind, indR, indL;
+    int  d1, d2;
 
     double RCLN, RCL, QCLN, QCL, VCLN, VCL, VL, VPL, WCLN, WCL, WL, WPL, RL, RPL, QL, QPL;
     double P1, P2, P3, RCRN, QCRN, RCR, QCR, RR, QR, VCRN, VCR, VR, WCRN, WCR, WR, RPR, QPR, VPR, WPR;
@@ -232,9 +232,12 @@ void FH_char(FHMD *fh)
 
     for(int d = 0; d < DIM; d++)
     {
-        for(int k = 0; k < NZ; k++)     // !!! TODO: NX=NY=NZ only!
+        d1 = d  + 1; if(d1 >= DIM) d1 = 0;
+        d2 = d1 + 1; if(d2 >= DIM) d2 = 0;
+
+        for(int k = 0; k < fh->N[d2]; k++)
         {
-            for(int j = 0; j < NY; j++)
+            for(int j = 0; j < fh->N[d1]; j++)
             {
 
                 RCLN = arr[L0].u_fh_n[d] + SOUND*log(arr[L0].ro_fh_n*RO1);
@@ -243,37 +246,39 @@ void FH_char(FHMD *fh)
                 QCLN = arr[L0].u_fh_n[d] - SOUND*log(arr[L0].ro_fh_n*RO1);
                 QCL  = arr[L0].u_fh[d]   - SOUND*log(arr[L0].ro_fh*RO1);
 
-                dn = d + 1; if(dn >= DIM) dn = 0;
+                VCLN = arr[L0].u_fh_n[d1];
+                VCL  = arr[L0].u_fh[d1];
+                VL   = arr[L0].uf[d1][d];
+                VPL  = arr[L1].uf[d1][d];
 
-                VCLN = arr[L0].u_fh_n[dn];
-                VCL  = arr[L0].u_fh[dn];
-                VL   = arr[L0].uf[dn][d];
-                VPL  = arr[L1].uf[dn][d];
-
-                dn++; if(dn >= DIM) dn = 0;
-
-                WCLN = arr[L0].u_fh_n[dn];
-                WCL  = arr[L0].u_fh[dn];
-                WL   = arr[L0].uf[dn][d];
-                WPL  = arr[L1].uf[dn][d];
+                WCLN = arr[L0].u_fh_n[d2];
+                WCL  = arr[L0].u_fh[d2];
+                WL   = arr[L0].uf[d2][d];
+                WPL  = arr[L1].uf[d2][d];
 
                 RL   = arr[L0].uf[d][d] + SOUND*log(arr[L0].rof[d]*RO1);
                 RPL  = arr[L1].uf[d][d] + SOUND*log(arr[L1].rof[d]*RO1);
                 QL   = arr[L0].uf[d][d] - SOUND*log(arr[L0].rof[d]*RO1);
                 QPL  = arr[L1].uf[d][d] - SOUND*log(arr[L1].rof[d]*RO1);
 
-                for(int i = 0; i < NX; i++)
+                for(int i = 0; i < fh->N[d]; i++)
                 {
                     switch(d)
                     {
                     case 0:
-                        ASSIGN_IND(ind, i, j, k);
+                        ASSIGN_IND(ind,  i,   j, k);
+                        ASSIGN_IND(indR, i+1, j, k);
+                        ASSIGN_IND(indL, i-1, j, k);
                         break;
                     case 1:
-                        ASSIGN_IND(ind, j, i, k);       // !!! TODO: Rotation order
+                        ASSIGN_IND(ind,  k, i,   j);
+                        ASSIGN_IND(indR, k, i+1, j);
+                        ASSIGN_IND(indL, k, i-1, j);
                         break;
                     case 2:
-                        ASSIGN_IND(ind, j, k, i);       // !!! TODO: Rotation order
+                        ASSIGN_IND(ind,  j, k, i  );
+                        ASSIGN_IND(indR, j, k, i+1);
+                        ASSIGN_IND(indL, j, k, i-1);
                         break;
                     }
 
@@ -281,7 +286,7 @@ void FH_char(FHMD *fh)
 
                     P1 = SOUND*log(arr[C].ro_fh_n*RO1);
                     P2 = SOUND*log(arr[C].ro_fh*RO1);
-                    P3 = SOUND*log(arr[R].rof[d]*RO1);
+                    P3 = SOUND*log(arr[IR].rof[d]*RO1);
 
                     RCRN = arr[C].u_fh_n[d] + P1;
                     QCRN = arr[C].u_fh_n[d] - P1;
@@ -289,20 +294,16 @@ void FH_char(FHMD *fh)
                     RCR  = arr[C].u_fh[d] + P2;
                     QCR  = arr[C].u_fh[d] - P2;
 
-                    RR   = arr[R].uf[d][d] + P3;
-                    QR   = arr[R].uf[d][d] - P3;
+                    RR   = arr[IR].uf[d][d] + P3;
+                    QR   = arr[IR].uf[d][d] - P3;
 
-                    dn = d + 1; if(dn >= DIM) dn = 0;
+                    VCRN = arr[C].u_fh_n[d1];
+                    VCR  = arr[C].u_fh[d1];
+                    VR   = arr[IR].uf[d1][d];
 
-                    VCRN = arr[C].u_fh_n[dn];
-                    VCR  = arr[C].u_fh[dn];
-                    VR   = arr[R].uf[dn][d];
-
-                    dn++; if(dn >= DIM) dn = 0;
-
-                    WCRN = arr[C].u_fh_n[dn];
-                    WCR  = arr[C].u_fh[dn];
-                    WR   = arr[R].uf[dn][d];
+                    WCRN = arr[C].u_fh_n[d2];
+                    WCR  = arr[C].u_fh[d2];
+                    WR   = arr[IR].uf[d2][d];
 
                     RPR  = RPL;
                     QPR  = QPL;
@@ -310,9 +311,9 @@ void FH_char(FHMD *fh)
                     WPR  = WPL;
 
                     // CHARACTERISTIC SPEEDS
-                    L1L = arr[CL].u_fh_n[d] + SOUND;
-                    L2L = arr[CL].u_fh_n[d] - SOUND;
-                    L3L = arr[CL].u_fh_n[d];
+                    L1L = arr[IL].u_fh_n[d] + SOUND;
+                    L2L = arr[IL].u_fh_n[d] - SOUND;
+                    L3L = arr[IL].u_fh_n[d];
                     L1R = arr[C].u_fh_n[d]  + SOUND;
                     L2R = arr[C].u_fh_n[d]  - SOUND;
                     L3R = arr[C].u_fh_n[d];
@@ -419,18 +420,11 @@ void FH_char(FHMD *fh)
                     VPN = blend*VPN1+(1.0 - blend)*VPN2;
                     WPN = blend*WPN1+(1.0 - blend)*WPN2;
 
-                    // NEW FLUXES
-
+                    // New fluxes
                     arr[C].rofn[d]    = fh->FH_dens*exp(0.5*(RPN - QPN)/SOUND);
                     arr[C].ufn[d][d]  = 0.5*(RPN + QPN);
-
-                    dn = d + 1; if(dn >= DIM) dn = 0;
-
-                    arr[C].ufn[dn][d] = VPN;
-
-                    dn++; if(dn >= DIM) dn = 0;
-
-                    arr[C].ufn[dn][d] = WPN;
+                    arr[C].ufn[d1][d] = VPN;
+                    arr[C].ufn[d2][d] = WPN;
 
                     // Pressure flux
                     switch(fh->eos)
@@ -492,7 +486,7 @@ void compute_random_stress(FHMD *fh)
     }
 
     // Compute current temperature and compute dynamic blending factor if enabled
-    if(FHMD_BLENDING < 0)
+    if(fh->FH_blend < 0)
     {
         blend = 0.0;
         Tcurr = T_INST/(double)(fh->Ntot);

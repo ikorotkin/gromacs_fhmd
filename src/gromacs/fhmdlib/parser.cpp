@@ -47,6 +47,8 @@ int parse_prm(char const *fname, FHMD *fh)
             ok = assign_double_value(&fh->FH_dens, line, fprm);
         else if(!strcmp(line, "FH_temp"))
             ok = assign_double_value(&fh->FH_temp, line, fprm);
+        else if(!strcmp(line, "FH_blend"))
+            ok = assign_double_value(&fh->FH_blend, line, fprm);
 
         if(!ok) return 0;   // error in prm-file
     }

@@ -31,8 +31,9 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
         fh->FH_EOS      = 1;
         fh->FH_step     = 10;
         fh->FH_equil    = 100000;
-        fh->FH_dens     = 600;
-        fh->FH_temp     = 300;
+        fh->FH_dens     = 602.181;
+        fh->FH_temp     = 298.15;
+        fh->FH_blend    = 0.005;
 
         /* Read FHMD parameters */
 
@@ -57,11 +58,11 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
 
         fprintf(fw, "; Hybrid Molecular Dynamics - 2-Way Coupling Parallel VERSION %4.2f\n\n", FHMD_VERSION);
 
-        fprintf(fw, "S = %g               ; Parameter S (-1 if S is variable)\n\n", fh->S);
-        fprintf(fw, "R1   = %g          ; MD sphere radius for variable S, [0..1]\n", fh->R1);
-        fprintf(fw, "R2   = %g          ; FH sphere radius for variable S, [0..1]\n", fh->R2);
-        fprintf(fw, "Smin = %g            ; Minimum S for variable S\n", fh->Smin);
-        fprintf(fw, "Smax = %g         ; Maximum S for variable S\n\n", fh->Smax);
+        fprintf(fw, "S = %g                   ; Parameter S (-1 if S is variable)\n\n", fh->S);
+        fprintf(fw, "R1   = %g              ; MD sphere radius for variable S, [0..1]\n", fh->R1);
+        fprintf(fw, "R2   = %g              ; FH sphere radius for variable S, [0..1]\n", fh->R2);
+        fprintf(fw, "Smin = %g                ; Minimum S for variable S\n", fh->Smin);
+        fprintf(fw, "Smax = %g             ; Maximum S for variable S\n\n", fh->Smax);
 
         if(fh->S >= 0.0) {
             printf(MAKE_PURPLE "FHMD: S = %g\n", fh->S);
@@ -76,8 +77,8 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
         }
 
         printf(MAKE_GREEN "FHMD: alpha = %g [nm^2/ps], beta = %g [nm^2/ps or ps^-1]\n", fh->alpha, fh->beta);
-        fprintf(fw, "alpha = %g          ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps\n", fh->alpha);
-        fprintf(fw, "beta  = %g          ; Beta parameter, nm^2/ps or ps^-1 depending on the scheme\n\n", fh->beta);
+        fprintf(fw, "alpha = %g              ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps\n", fh->alpha);
+        fprintf(fw, "beta  = %g              ; Beta parameter, nm^2/ps or ps^-1 depending on the scheme\n\n", fh->beta);
 
         fh->box[0] = box[0][0];
         fh->box[1] = box[1][1];
@@ -87,9 +88,9 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
 
         printf("FHMD: MD/FH box size: %g x %g x %g [nm]\n", fh->box[0], fh->box[1], fh->box[2]);
         printf("FHMD: FH grid size:   %d x %d x %d\n", fh->N[0], fh->N[1], fh->N[2]);
-        fprintf(fw, "Nx = %d              ; Number of FH cells along X axis\n", fh->N[0]);
-        fprintf(fw, "Ny = %d              ; Number of FH cells along Y axis\n", fh->N[1]);
-        fprintf(fw, "Nz = %d              ; Number of FH cells along Z axis\n\n", fh->N[2]);
+        fprintf(fw, "Nx = %d                  ; Number of FH cells along X axis\n", fh->N[0]);
+        fprintf(fw, "Ny = %d                  ; Number of FH cells along Y axis\n", fh->N[1]);
+        fprintf(fw, "Nz = %d                  ; Number of FH cells along Z axis\n\n", fh->N[2]);
 
         fh->Ntot  = fh->N[0]*fh->N[1]*fh->N[2];
 
@@ -108,19 +109,20 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
             exit(18);
         }
 
-        fprintf(fw, "FH_EOS   = %d        ; EOS: 0 - Liquid Argon, 1 - SPC/E water\n", fh->FH_EOS);
+        fprintf(fw, "FH_EOS   = %d            ; EOS: 0 - Liquid Argon, 1 - SPC/E water\n", fh->FH_EOS);
 
         fh->dt_FH = (double)(fh->FH_step)*dt_md;
 
         printf("FHMD: FH time step dt_FH = %d * dt_MD = %g [ps]\n", fh->FH_step, fh->dt_FH);
-        fprintf(fw, "FH_step  = %d       ; FH time step dt_FH = FH_step * dt_MD\n", fh->FH_step);
+        fprintf(fw, "FH_step  = %d           ; FH time step dt_FH = FH_step * dt_MD\n", fh->FH_step);
 
         printf("FHMD: FH equilibration steps: %d\n", fh->FH_equil);
-        fprintf(fw, "FH_equil = %d     ; Number of time steps for the FH model equilibration\n", fh->FH_equil);
+        fprintf(fw, "FH_equil = %d         ; Number of time steps for the FH model equilibration\n", fh->FH_equil);
 
         printf("FHMD: FH Density = %g [amu/nm^3], FH Temperature = %g [K]\n", fh->FH_dens, fh->FH_temp);
         fprintf(fw, "FH_dens  = %g      ; FH mean density\n", fh->FH_dens);
-        fprintf(fw, "FH_temp  = %g      ; FH mean temperature\n", fh->FH_temp);
+        fprintf(fw, "FH_temp  = %g       ; FH mean temperature\n", fh->FH_temp);
+        fprintf(fw, "FH_blend = %g        ; FH Blending: -1 - dynamic, or define static blending parameter (0..1)\n", fh->FH_blend);
 
         printf(RESET_COLOR "\n");
 

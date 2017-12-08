@@ -16,6 +16,9 @@
 #define L0      I3b(-1,j,k,d,fh->N)     /* Point [-1][j][k] */
 #define L1      I3b( 0,j,k,d,fh->N)     /* Point [0][j][k] */
 
+#define IR      I(indR, fh->N)
+#define IL      I(indL, fh->N)
+
 #define SUM(f)  (f[0] + f[1] + f[2])
 
 #define ASSIGN_IND(ind, i, j, k) \
@@ -99,7 +102,7 @@ static int I3b(const int index, const int j, const int k, const int d, const ive
         ASSIGN_IND(ind, index, j, k);
         break;
     case 1:
-        ASSIGN_IND(ind, j, index, k);   // !!! TODO: Order!
+        ASSIGN_IND(ind, k, index, j);
         break;
     case 2:
         ASSIGN_IND(ind, j, k, index);

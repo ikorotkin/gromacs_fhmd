@@ -78,6 +78,7 @@ typedef struct FHMD
     int         FH_equil;       /* Number of time steps for the FH model equilibration */
     double      FH_dens;        /* FH mean density */
     double      FH_temp;        /* FH mean temperature */
+    double      FH_blend;       /* FH Blending: -1 - dynamic, or define static blending parameter (0.0 = Central Diff., 1.0 = Classic CABARET) */
     double      dt_FH;          /* FH time step */
 } FHMD;
 
