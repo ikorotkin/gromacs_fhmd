@@ -132,6 +132,7 @@
 #include "gromacs/fhmdlib/coupling.h"
 #include "gromacs/fhmdlib/new_update.h"
 #include "gromacs/fhmdlib/output.h"
+#include "gromacs/fhmdlib/fh_functions.h"
 
 using gmx::SimulationSignaller;
 
@@ -1466,6 +1467,16 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 fhmd_update_MD_in_FH(state->x, state->v, mdatoms->massT, mdatoms->homenr, &fhmd);
 
                 /*
+                 * FHMD: For one-way coupling -- make full FH time step
+                 */
+                if(MASTER(cr) && !(fhmd.step_MD % fhmd.FH_step))
+                {
+                    FH_do_single_timestep(&fhmd);
+                    printf("\rCurrent MD time step: %d", fhmd.step_MD);
+                    fflush(stdout);
+                }
+
+                /*
                  * FHMD: Broadcast new FH variables
                  */
                 if(PAR(cr))
@@ -1480,7 +1491,8 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 fhmd_calculate_MDFH_terms(&fhmd);
 
 #ifdef FHMD_DEBUG
-                if(MASTER(cr)) fhmd_dump_all(&fhmd);
+                if(MASTER(cr) && !(fhmd.step_MD % 10))
+                    fhmd_dump_all(&fhmd);
 #endif
 
                 /*

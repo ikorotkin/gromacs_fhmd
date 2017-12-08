@@ -98,6 +98,10 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
 void fhmd_calculate_MDFH_terms(FHMD *fh)
 {
     FH_arrays *arr = fh->arr;
+    double       S = fh->S;
+
+    ivec ind;
+    dvec alpha_term;
 
     for(int i = 0; i < fh->Ntot; i++)
     {
@@ -107,6 +111,52 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
         }
 
         arr[i].inv_ro = 1.0/arr[i].ro_md;
+
+        // For 1-way coupling
+        arr[i].delta_ro = arr[i].ro_fh - arr[i].ro_md;
+        for(int d = 0; d < DIM; d++)
+            arr[i].beta_term[d] = fh->beta*S*(1 - S)*(arr[i].u_fh[d]*arr[i].ro_fh - arr[i].uro_md[d]);
+    }
+
+    for(int k = 0; k < NZ; k++)
+    {
+        for(int j = 0; j < NY; j++)
+        {
+            for(int i = 0; i < NX; i++)
+            {
+                ASSIGN_IND(ind, i, j, k);
+
+                for(int d = 0; d < DIM; d++)
+                {
+                    arr[i].grad_ro[d] = fh->alpha*(arr[CR].delta_ro - arr[CL].delta_ro)/(0.5*(fh->grid.h[CL][d] + 2.0*fh->grid.h[C][d] + fh->grid.h[CR][d]));
+
+                    for(int du = 0; du < DIM; du++)
+                        arr[i].alpha_u_grad[du][d] = arr[i].grad_ro[d]*S*(1 - S)*arr[i].uro_md[du]*arr[i].inv_ro;   // TODO: Rough but fast estimation!
+                }
+            }
+        }
+    }
+
+    for(int k = 0; k < NZ; k++)
+    {
+        for(int j = 0; j < NY; j++)
+        {
+            for(int i = 0; i < NX; i++)
+            {
+                ASSIGN_IND(ind, i, j, k);
+
+                for(int du = 0; du < DIM; du++)
+                {
+                    for(int d = 0; d < DIM; d++)
+                    {
+                        alpha_term[d] = (arr[CR].alpha_u_grad[du][d] - arr[CL].alpha_u_grad[du][d])
+                                /(0.5*(fh->grid.h[CL][d] + 2.0*fh->grid.h[C][d] + fh->grid.h[CR][d]));
+                    }
+
+                    arr[i].alpha_term[du] = SUM(alpha_term);
+                }
+            }
+        }
     }
 }
 

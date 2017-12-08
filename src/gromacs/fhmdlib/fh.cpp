@@ -31,7 +31,7 @@ void FH_init(FHMD *fh)
         break;
     }
 
-#ifdef FHMD_DEBUG
+#ifdef FHMD_DEBUG_FH
     printf(MAKE_YELLOW "FHMD DEBUG: MU = %g, KAPPA = %g\n", MU, KAPPA);
     printf(MAKE_YELLOW "FHMD DEBUG: A = %g, B = %g, C = %g\n", EOS_A, EOS_B, EOS_C);
     printf(MAKE_YELLOW "FHMD DEBUG: Initial Pressure = %g, Speed of Sound = %g\n", P_INIT, SOUND*1000.0);
@@ -125,10 +125,10 @@ void FH_predictor(FHMD *fh)
                     }
 
                     // FH force
-                    arr[C].f_fh[dim] = -SUM(F) - PG[dim] + SUM(TAU) + SUM(TAURAN);
+                    arr[C].f_fh[dim] = -PG[dim] + SUM(TAU) + SUM(TAURAN);
 
                     // Momentum conservation
-                    arr[C].u_fh_n[dim] = (arr[C].ro_fh*arr[C].u_fh[dim] + 0.5*DT*arr[C].f_fh[dim])/arr[C].ro_fh_n;
+                    arr[C].u_fh_n[dim] = (arr[C].ro_fh*arr[C].u_fh[dim] + 0.5*DT*(-SUM(F) + arr[C].f_fh[dim]))/arr[C].ro_fh_n;
                 }
 
                 // Pressure
@@ -192,10 +192,10 @@ void FH_corrector(FHMD *fh)
                     }
 
                     // FH force
-                    arr[C].f_fh[dim] = -SUM(F) - PG[dim] + SUM(TAU) + SUM(TAURAN);
+                    arr[C].f_fh[dim] = -PG[dim] + SUM(TAU) + SUM(TAURAN);
 
                     // Momentum conservation
-                    arr[C].u_fh[dim] = (arr[C].ro_fh_n*arr[C].u_fh_n[dim] + 0.5*DT*arr[C].f_fh[dim])/arr[C].ro_fh;
+                    arr[C].u_fh[dim] = (arr[C].ro_fh_n*arr[C].u_fh_n[dim] + 0.5*DT*(-SUM(F) + arr[C].f_fh[dim]))/arr[C].ro_fh;
                 }
 
                 // Pressure
@@ -576,6 +576,9 @@ void FH_do_single_timestep(FHMD *fh)
     FH_corrector(fh);
 
     swap_var(fh);
+
+    T += fh->dt_FH;
+    STEP++;
 }
 
 
@@ -613,9 +616,6 @@ void FH_equilibrate(FHMD *fh)
         }
 
         FH_do_single_timestep(fh);
-
-        T += fh->dt_FH;
-        STEP++;
     }
 
     printf("\n---------------------------------------------------------------------------------------------------------------------------------------\n");

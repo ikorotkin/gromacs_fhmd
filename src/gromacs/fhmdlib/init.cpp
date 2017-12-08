@@ -117,7 +117,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
         fprintf(fw, "FH_step  = %d           ; FH time step dt_FH = FH_step * dt_MD\n", fh->FH_step);
 
         printf("FHMD: FH equilibration steps: %d\n", fh->FH_equil);
-        fprintf(fw, "FH_equil = %d         ; Number of time steps for the FH model equilibration\n", fh->FH_equil);
+        fprintf(fw, "FH_equil = %d       ; Number of time steps for the FH model equilibration\n", fh->FH_equil);
 
         printf("FHMD: FH Density = %g [amu/nm^3], FH Temperature = %g [K]\n", fh->FH_dens, fh->FH_temp);
         fprintf(fw, "FH_dens  = %g      ; FH mean density\n", fh->FH_dens);

@@ -22,7 +22,10 @@ typedef struct FH_arrays        /* FH/MD arrays */
     dvec        f_fh;           /* FH force */
     dvec        alpha_term;     /* alpha term for du/dt equation */
     dvec        beta_term;      /* beta term for du/dt equation */
-    dvec        alpha_x_term;   /* alpha term for dx/dt equation */
+
+    double      delta_ro;       /* delta rho for 1-way coupling or ro_prime for 2-way */
+    dvec        grad_ro;        /* grad of density */
+    matrix      alpha_u_grad;   /* preliminary alpha-term [u-index][grad-index] */
 
     double      ro_prime, ron_prime;    /* density prime */
     double      ro_star, ron_star;      /* density star */

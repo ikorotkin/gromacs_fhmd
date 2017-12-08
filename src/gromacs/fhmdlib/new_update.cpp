@@ -31,7 +31,7 @@ void fhmd_do_update_md(int start, int nrend,
     double     S = fh->S;
     int        nbr[8];
     dvec       xi;
-    dvec       f_fh, u_fh, alpha_term, beta_term, alpha_x_term;
+    dvec       f_fh, u_fh, alpha_term, beta_term, grad_ro;
 
     if (bNH || bPR)
     {
@@ -70,11 +70,11 @@ void fhmd_do_update_md(int start, int nrend,
 
                 trilinear_find_neighbours(x[n], n, xi, nbr, fh);
 
-                trilinear_interpolation(f_fh,         xi, INTERPOLATE(f_fh));
-                trilinear_interpolation(u_fh,         xi, INTERPOLATE(u_fh));
-                trilinear_interpolation(alpha_term,   xi, INTERPOLATE(alpha_term));
-                trilinear_interpolation(beta_term,    xi, INTERPOLATE(beta_term));
-                trilinear_interpolation(alpha_x_term, xi, INTERPOLATE(alpha_x_term));
+                trilinear_interpolation(f_fh,       xi, INTERPOLATE(f_fh));
+                trilinear_interpolation(u_fh,       xi, INTERPOLATE(u_fh));
+                trilinear_interpolation(alpha_term, xi, INTERPOLATE(alpha_term));
+                trilinear_interpolation(beta_term,  xi, INTERPOLATE(beta_term));
+                trilinear_interpolation(grad_ro,    xi, INTERPOLATE(grad_ro));
 
 #ifdef FHMD_DEBUG_INTERPOL
                 if(!(n % 10000) && !(fh->step_MD % 50))
@@ -91,12 +91,12 @@ void fhmd_do_update_md(int start, int nrend,
 
                 for (d = 0; d < DIM; d++)
                 {
-                    /* vn           = lg*v[n][d] + f[n][d]*w_dt; */
-                    /* v[n][d]      = vn; */
-                    /* xprime[n][d] = x[n][d] + vn*dt; */
-                    vn           = lg*v[n][d] + ((1 - S)*f[n][d] + S*f_fh[d])*w_dt + (alpha_term[d] + beta_term[d])*invro_dt;
+                 /* vn           = lg*v[n][d] + f[n][d]*w_dt; */
+                 /* v[n][d]      = vn; */
+                 /* xprime[n][d] = x[n][d] + vn*dt; */
+                    vn           = lg*v[n][d] + (1 - S)*f[n][d]*w_dt + (S*f_fh[d] + alpha_term[d] + beta_term[d])*invro_dt;
                     v[n][d]      = vn;
-                    xprime[n][d] = x[n][d] + ((1 - S)*vn + S*u_fh[d])*dt + alpha_x_term[d]*invro_dt;
+                    xprime[n][d] = x[n][d] + ((1 - S)*vn + S*u_fh[d])*dt + S*(1 - S)*grad_ro[d]*invro_dt;
                 }
             }
             else
