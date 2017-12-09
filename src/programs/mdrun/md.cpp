@@ -1490,10 +1490,12 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                  */
                 fhmd_calculate_MDFH_terms(&fhmd);
 
-#ifdef FHMD_DEBUG
-                if(MASTER(cr) && !(fhmd.step_MD % 10))
-                    fhmd_dump_all(&fhmd);
-#endif
+                /*
+                 * FHMD: Save all MD/FH arrays to files
+                 */
+                if(MASTER(cr) && (fhmd.Noutput > 0))
+                    if(!(fhmd.step_MD % fhmd.Noutput))
+                        fhmd_dump_all(&fhmd);
 
                 /*
                  * FHMD: Modified update_coords() here

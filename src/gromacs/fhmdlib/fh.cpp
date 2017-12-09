@@ -415,10 +415,10 @@ void FH_char(FHMD *fh)
                     if(WPN2 < WMIN) WPN2 = WMIN;
 
                     // Blending
-                    RPN = blend*RPN1+(1.0 - blend)*RPN2;
-                    QPN = blend*QPN1+(1.0 - blend)*QPN2;
-                    VPN = blend*VPN1+(1.0 - blend)*VPN2;
-                    WPN = blend*WPN1+(1.0 - blend)*WPN2;
+                    RPN = blend*RPN1 + (1.0 - blend)*RPN2;
+                    QPN = blend*QPN1 + (1.0 - blend)*QPN2;
+                    VPN = blend*VPN1 + (1.0 - blend)*VPN2;
+                    WPN = blend*WPN1 + (1.0 - blend)*WPN2;
 
                     // New fluxes
                     arr[C].rofn[d]    = fh->FH_dens*exp(0.5*(RPN - QPN)/SOUND);

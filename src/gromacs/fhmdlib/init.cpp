@@ -34,6 +34,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
         fh->FH_dens     = 602.181;
         fh->FH_temp     = 298.15;
         fh->FH_blend    = 0.005;
+        fh->Noutput     = 10;
 
         /* Read FHMD parameters */
 
@@ -76,9 +77,9 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
             printf(MAKE_GREEN "FHMD: Absolute values of R [nm]: R1 = %f, R2 = %f\n", fh->R1, fh->R2);
         }
 
-        printf(MAKE_GREEN "FHMD: alpha = %g [nm^2/ps], beta = %g [nm^2/ps or ps^-1]\n", fh->alpha, fh->beta);
+        printf(MAKE_GREEN "FHMD: alpha = %g [nm^2/ps], beta = %g [ps^-1]\n", fh->alpha, fh->beta);
         fprintf(fw, "alpha = %g              ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps\n", fh->alpha);
-        fprintf(fw, "beta  = %g              ; Beta parameter, nm^2/ps or ps^-1 depending on the scheme\n\n", fh->beta);
+        fprintf(fw, "beta  = %g              ; Beta parameter for du/dt equation, ps^-1\n\n", fh->beta);
 
         fh->box[0] = box[0][0];
         fh->box[1] = box[1][1];
@@ -122,7 +123,10 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
         printf("FHMD: FH Density = %g [amu/nm^3], FH Temperature = %g [K]\n", fh->FH_dens, fh->FH_temp);
         fprintf(fw, "FH_dens  = %g      ; FH mean density\n", fh->FH_dens);
         fprintf(fw, "FH_temp  = %g       ; FH mean temperature\n", fh->FH_temp);
-        fprintf(fw, "FH_blend = %g        ; FH Blending: -1 - dynamic, or define static blending parameter (0..1)\n", fh->FH_blend);
+        fprintf(fw, "FH_blend = %g        ; FH Blending: -1 - dynamic, or define static blending parameter (0..1)\n\n", fh->FH_blend);
+
+        printf("FHMD: MD/FH arrays will be written every %d MD time steps\n", fh->Noutput);
+        fprintf(fw, "Noutput  = %d           ; Write arrays to files every Noutput MD time steps (0 - do not write)\n", fh->Noutput);
 
         printf(RESET_COLOR "\n");
 

@@ -7,25 +7,25 @@
 #include <math.h>
 
 #include "params.h"
-#include "gromacs/mdtypes/commrec.h"        /* GROMACS MPI definitions, 't_commrec', MASTER(), PAR(), etc. */
-#include "gromacs/gmxlib/network.h"         /* GROMACS MPI functions, gmx_bcast(), gmx_sumf(), etc. */
-#include "gromacs/math/vectypes.h"          /* GROMACS vector types: rvec, dvec, ivec, etc. */
-#include "gromacs/math/vec.h"               /* GROMACS vector operations: copy_ivec, dvec_add, etc. */
+#include "gromacs/mdtypes/commrec.h"    /* GROMACS MPI definitions, 't_commrec', MASTER(), PAR(), etc. */
+#include "gromacs/gmxlib/network.h"     /* GROMACS MPI functions, gmx_bcast(), gmx_sumf(), etc. */
+#include "gromacs/math/vectypes.h"      /* GROMACS vector types: rvec, dvec, ivec, etc. */
+#include "gromacs/math/vec.h"           /* GROMACS vector operations: copy_ivec, dvec_add, etc. */
 
 
-typedef struct FH_arrays        /* FH/MD arrays */
+typedef struct FH_arrays                /* FH/MD arrays */
 {
-    double      ro_md, ro_fh;   /* densities */
-    double      inv_ro;         /* inverse density: 1/ro_md */
-    dvec        u_md, u_fh;     /* velocities */
-    dvec        uro_md;         /* momentum */
-    dvec        f_fh;           /* FH force */
-    dvec        alpha_term;     /* alpha term for du/dt equation */
-    dvec        beta_term;      /* beta term for du/dt equation */
+    double      ro_md, ro_fh;           /* densities */
+    double      inv_ro;                 /* inverse density: 1/ro_md */
+    dvec        u_md, u_fh;             /* velocities */
+    dvec        uro_md;                 /* momentum */
+    dvec        f_fh;                   /* FH force */
+    dvec        alpha_term;             /* alpha term for du/dt equation */
+    dvec        beta_term;              /* beta term for du/dt equation */
 
-    double      delta_ro;       /* delta rho for 1-way coupling or ro_prime for 2-way */
-    dvec        grad_ro;        /* grad of density */
-    matrix      alpha_u_grad;   /* preliminary alpha-term [u-index][grad-index] */
+    double      delta_ro;               /* delta rho for 1-way coupling or ro_prime for 2-way */
+    dvec        grad_ro;                /* grad of density */
+    matrix      alpha_u_grad;           /* preliminary alpha-term [u-index][grad-index] */
 
     double      ro_prime, ron_prime;    /* density prime */
     double      ro_star, ron_star;      /* density star */
@@ -74,6 +74,7 @@ typedef struct FHMD
     double      total_density;  /* Total density of the box, a.m.u./nm^3 */
     int         Ntot;           /* Total number of FH cells */
     int         step_MD;        /* Current MD time step */
+    int         Noutput;        /* Write arrays to files every Noutput MD time steps (0 - do not write) */
 
     int         FH_EOS;         /* EOS: 0 - Liquid Argon, 1 - SPC/E water */
     FHMD_EOS    eos;            /* Equation of state */
