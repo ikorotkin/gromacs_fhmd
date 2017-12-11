@@ -133,6 +133,7 @@
 #include "gromacs/fhmdlib/new_update.h"
 #include "gromacs/fhmdlib/output.h"
 #include "gromacs/fhmdlib/fh_functions.h"
+#include "gromacs/fhmdlib/estimate.h"
 
 using gmx::SimulationSignaller;
 
@@ -1470,11 +1471,7 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                  * FHMD: For one-way coupling -- make full FH time step
                  */
                 if(MASTER(cr) && !(fhmd.step_MD % fhmd.FH_step))
-                {
                     FH_do_single_timestep(&fhmd);
-                    printf("\rCurrent MD time step: %d", fhmd.step_MD);
-                    fflush(stdout);
-                }
 
                 /*
                  * FHMD: Broadcast new FH variables
@@ -1496,6 +1493,11 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 if(MASTER(cr) && (fhmd.Noutput > 0))
                     if(!(fhmd.step_MD % fhmd.Noutput))
                         fhmd_dump_all(&fhmd);
+
+                /*
+                 * FHMD: Collect and print statistics
+                 */
+                if(MASTER(cr)) fhmd_print_statistics(&fhmd);
 
                 /*
                  * FHMD: Modified update_coords() here

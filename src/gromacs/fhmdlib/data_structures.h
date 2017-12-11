@@ -51,10 +51,28 @@ typedef struct FH_grid          /* Computational grid */
 } FH_grid;
 
 
+typedef struct MD_stat          /* Particle statistics */
+{
+    int         N;
+    double      invN;
+
+    double      davg_rho_md,  davg_rho_fh;
+    double      davg_rho2_md, davg_rho2_fh;
+    dvec        davg_u_md,    davg_u_fh;
+    dvec        davg_u2_md,   davg_u2_fh;
+
+    double      avg_rho_md,   avg_rho_fh;
+    double      std_rho_md,   std_rho_fh;
+    dvec        avg_u_md,     avg_u_fh;
+    dvec        std_u_md,     std_u_fh;
+} MD_stat;
+
+
 typedef struct FHMD
 {
     FH_arrays  *arr;            /* FH/MD arrays */
     FH_grid     grid;           /* FH grid */
+    MD_stat     stat;           /* Particle statistics */
     int        *ind;            /* FH cell number for each atom */
     ivec       *indv;           /* 3-component FH cell number for each atom (vector) */
     double     *mpi_linear;     /* Linear array to summarise MDFH arrays */

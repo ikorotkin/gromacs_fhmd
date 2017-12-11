@@ -15,7 +15,6 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], int N_atoms, FHMD *fh
 
         for(int d = 0; d < DIM; d++)
         {
-            arr[i].u_md[d]   = 0;
             arr[i].uro_md[d] = 0;
         }
     }
@@ -44,7 +43,6 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], int N_atoms, FHMD *fh
 
         for(int d = 0; d < DIM; d++)
         {
-            arr[ind].u_md[d]   += v[n][d];
             arr[ind].uro_md[d] += v[n][d]*mass[n];
         }
     }
@@ -70,12 +68,9 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
     for(int i = 0; i < fh->Ntot; i++)
     {
         fh->mpi_linear[i]              = arr[i].ro_md;
-        fh->mpi_linear[i + fh->Ntot]   = arr[i].u_md[0];
-        fh->mpi_linear[i + fh->Ntot*2] = arr[i].u_md[1];
-        fh->mpi_linear[i + fh->Ntot*3] = arr[i].u_md[2];
-        fh->mpi_linear[i + fh->Ntot*4] = arr[i].uro_md[0];
-        fh->mpi_linear[i + fh->Ntot*5] = arr[i].uro_md[1];
-        fh->mpi_linear[i + fh->Ntot*6] = arr[i].uro_md[2];
+        fh->mpi_linear[i + fh->Ntot]   = arr[i].uro_md[0];
+        fh->mpi_linear[i + fh->Ntot*2] = arr[i].uro_md[1];
+        fh->mpi_linear[i + fh->Ntot*3] = arr[i].uro_md[2];
     }
 
     /* Broadcast linear array */
@@ -85,12 +80,9 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
     for(int i = 0; i < fh->Ntot; i++)
     {
         arr[i].ro_md     = fh->mpi_linear[i];
-        arr[i].u_md[0]   = fh->mpi_linear[i + fh->Ntot];
-        arr[i].u_md[1]   = fh->mpi_linear[i + fh->Ntot*2];
-        arr[i].u_md[2]   = fh->mpi_linear[i + fh->Ntot*3];
-        arr[i].uro_md[0] = fh->mpi_linear[i + fh->Ntot*4];
-        arr[i].uro_md[1] = fh->mpi_linear[i + fh->Ntot*5];
-        arr[i].uro_md[2] = fh->mpi_linear[i + fh->Ntot*6];
+        arr[i].uro_md[0] = fh->mpi_linear[i + fh->Ntot];
+        arr[i].uro_md[1] = fh->mpi_linear[i + fh->Ntot*2];
+        arr[i].uro_md[2] = fh->mpi_linear[i + fh->Ntot*3];
     }
 }
 
@@ -112,6 +104,9 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
 
         arr[i].inv_ro = 1.0/arr[i].ro_md;
 
+        for(int d = 0; d < DIM; d++)
+            arr[i].u_md[d] = arr[i].uro_md[d]*arr[i].inv_ro;
+
         // For 1-way coupling
         arr[i].delta_ro = arr[i].ro_fh - arr[i].ro_md;
         for(int d = 0; d < DIM; d++)
@@ -131,7 +126,7 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
                     arr[i].grad_ro[d] = fh->alpha*(arr[CR].delta_ro - arr[CL].delta_ro)/(0.5*(fh->grid.h[CL][d] + 2.0*fh->grid.h[C][d] + fh->grid.h[CR][d]));
 
                     for(int du = 0; du < DIM; du++)
-                        arr[i].alpha_u_grad[du][d] = arr[i].grad_ro[d]*S*(1 - S)*arr[i].uro_md[du]*arr[i].inv_ro;   // TODO: Rough but fast estimation!
+                        arr[i].alpha_u_grad[du][d] = arr[i].grad_ro[d]*S*(1 - S)*arr[i].uro_md[du]*arr[i].inv_ro;   // TODO: Fast but rough estimation!
                 }
             }
         }

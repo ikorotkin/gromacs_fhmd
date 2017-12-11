@@ -1,6 +1,7 @@
 #include "data_structures.h"
 #include "parser.h"
 #include "fh_functions.h"
+#include "estimate.h"
 
 
 int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr, FHMD *fh)
@@ -137,6 +138,8 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
 
     } // if(MASTER(cr))
 
+    fhmd_reset_statistics(fh);
+
     fh->total_density = 0;
     for(int i = 0; i < N_atoms; i++)
         fh->total_density += mass[i];
@@ -166,7 +169,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
     fh->ind  = (int*)calloc(N_atoms, sizeof(int));
     fh->indv = (ivec*)calloc(N_atoms, sizeof(ivec));
 
-    fh->mpi_linear = (double*)malloc(7*fh->Ntot*sizeof(double));    // 7 components: ro_md, u_md[3], uro_md[3]
+    fh->mpi_linear = (double*)malloc(4*fh->Ntot*sizeof(double));    // 4 components: ro_md, uro_md[3]
 
     if(fh->arr == NULL || fh->ind == NULL || fh->indv == NULL || fh->mpi_linear == NULL)
     {
