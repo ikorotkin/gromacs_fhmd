@@ -74,7 +74,7 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
     }
 
     /* Broadcast linear array */
-    gmx_sumd(fh->Ntot*7, fh->mpi_linear, cr);
+    gmx_sumd(fh->Ntot*4, fh->mpi_linear, cr);
 
     /* Unpack linear array */
     for(int i = 0; i < fh->Ntot; i++)
@@ -123,10 +123,10 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
 
                 for(int d = 0; d < DIM; d++)
                 {
-                    arr[i].grad_ro[d] = fh->alpha*(arr[CR].delta_ro - arr[CL].delta_ro)/(0.5*(fh->grid.h[CL][d] + 2.0*fh->grid.h[C][d] + fh->grid.h[CR][d]));
+                    arr[C].grad_ro[d] = fh->alpha*(arr[CR].delta_ro - arr[CL].delta_ro)/(0.5*(fh->grid.h[CL][d] + 2.0*fh->grid.h[C][d] + fh->grid.h[CR][d]));
 
                     for(int du = 0; du < DIM; du++)
-                        arr[i].alpha_u_grad[du][d] = arr[i].grad_ro[d]*S*(1 - S)*arr[i].uro_md[du]*arr[i].inv_ro;   // TODO: Fast but rough estimation!
+                        arr[C].alpha_u_grad[du][d] = arr[C].grad_ro[d]*S*(1 - S)*arr[C].u_md[du];    // TODO: Fast but rough estimation!
                 }
             }
         }
@@ -148,7 +148,7 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
                                 /(0.5*(fh->grid.h[CL][d] + 2.0*fh->grid.h[C][d] + fh->grid.h[CR][d]));
                     }
 
-                    arr[i].alpha_term[du] = SUM(alpha_term);
+                    arr[C].alpha_term[du] = SUM(alpha_term);
                 }
             }
         }

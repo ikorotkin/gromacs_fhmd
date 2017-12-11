@@ -1497,7 +1497,8 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 /*
                  * FHMD: Collect and print statistics
                  */
-                if(MASTER(cr)) fhmd_print_statistics(&fhmd);
+                if(MASTER(cr))
+                    fhmd_print_statistics(&fhmd);
 
                 /*
                  * FHMD: Modified update_coords() here

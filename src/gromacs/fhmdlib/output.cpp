@@ -28,8 +28,8 @@ void write_header(FILE *fw, FHMD *fh)
 
 void fhmd_dump_all(FHMD *fh)
 {
-    FILE      *fw;
-    char       fname[64];
+    FILE *fw;
+    char  fname[64];
 
     write_dump(ro_md,   "ro_md");
     write_dump(ro_fh,   "ro_fh");

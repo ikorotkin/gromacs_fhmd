@@ -31,7 +31,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
         fh->N[2]        = 5;
         fh->FH_EOS      = 1;
         fh->FH_step     = 10;
-        fh->FH_equil    = 100000;
+        fh->FH_equil    = 10000;
         fh->FH_dens     = 602.181;
         fh->FH_temp     = 298.15;
         fh->FH_blend    = 0.005;
@@ -119,7 +119,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
         fprintf(fw, "FH_step  = %d           ; FH time step dt_FH = FH_step * dt_MD\n", fh->FH_step);
 
         printf("FHMD: FH equilibration steps: %d\n", fh->FH_equil);
-        fprintf(fw, "FH_equil = %d       ; Number of time steps for the FH model equilibration\n", fh->FH_equil);
+        fprintf(fw, "FH_equil = %d        ; Number of time steps for the FH model equilibration\n", fh->FH_equil);
 
         printf("FHMD: FH Density = %g [amu/nm^3], FH Temperature = %g [K]\n", fh->FH_dens, fh->FH_temp);
         fprintf(fw, "FH_dens  = %g      ; FH mean density\n", fh->FH_dens);
@@ -199,6 +199,9 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
     {
         FH_init(fh);
         FH_equilibrate(fh);
+
+        printf(MAKE_GREEN "FHMD: Initialization finished. Starting MD/FH solver...\n" RESET_COLOR "\n");
+        fflush(stdout);
     }
 
     return 1;   // Success
