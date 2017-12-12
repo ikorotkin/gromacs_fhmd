@@ -90,7 +90,7 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
 void fhmd_calculate_MDFH_terms(FHMD *fh)
 {
     FH_arrays *arr = fh->arr;
-    double       S = fh->S;
+    double       S = 0; //fh->S; TODO: Remove alpha-term at all?
 
     ivec ind;
     dvec alpha_term;
@@ -110,7 +110,10 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
         // For 1-way coupling
         arr[i].delta_ro = arr[i].ro_fh - arr[i].ro_md;
         for(int d = 0; d < DIM; d++)
-            arr[i].beta_term[d] = fh->beta*S*(1 - S)*(arr[i].u_fh[d]*arr[i].ro_fh - arr[i].uro_md[d]);
+        {
+            arr[i].f_fh[d]      = 0;
+            arr[i].beta_term[d] = fh->beta*(arr[i].u_fh[d]*arr[i].ro_fh - arr[i].uro_md[d]);
+        }
     }
 
     for(int k = 0; k < NZ; k++)

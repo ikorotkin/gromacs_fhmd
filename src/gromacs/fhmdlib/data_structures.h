@@ -88,6 +88,7 @@ typedef struct FHMD
 
     ivec        N;              /* Number of FH cells along each direction */
     dvec        box;            /* Box size */
+    dvec        box05;          /* Half of box size */
     double      box_volume;     /* Volume of the box, nm^3 */
     double      total_density;  /* Total density of the box, a.m.u./nm^3 */
     int         Ntot;           /* Total number of FH cells */

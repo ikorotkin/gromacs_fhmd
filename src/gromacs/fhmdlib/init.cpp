@@ -24,8 +24,8 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
         fh->R2          = 0.9;
         fh->Smin        = 0;
         fh->Smax        = 0.99;
-        fh->alpha       = 10;
-        fh->beta        = 10;
+        fh->alpha       = 1000;
+        fh->beta        = 1000;
         fh->N[0]        = 5;
         fh->N[1]        = 5;
         fh->N[2]        = 5;
@@ -79,12 +79,14 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
         }
 
         printf(MAKE_GREEN "FHMD: alpha = %g [nm^2/ps], beta = %g [ps^-1]\n", fh->alpha, fh->beta);
-        fprintf(fw, "alpha = %g              ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps\n", fh->alpha);
-        fprintf(fw, "beta  = %g              ; Beta parameter for du/dt equation, ps^-1\n\n", fh->beta);
+        fprintf(fw, "alpha = %g            ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps\n", fh->alpha);
+        fprintf(fw, "beta  = %g            ; Beta parameter for du/dt equation, ps^-1\n\n", fh->beta);
 
-        fh->box[0] = box[0][0];
-        fh->box[1] = box[1][1];
-        fh->box[2] = box[2][2];
+        for(int d = 0; d < DIM; d++)
+        {
+            fh->box[d]   = box[d][d];
+            fh->box05[d] = 0.5*fh->box[d];
+        }
 
         fh->box_volume = fh->box[0]*fh->box[1]*fh->box[2];
 

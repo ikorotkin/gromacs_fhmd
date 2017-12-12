@@ -2,6 +2,7 @@
 #include "gromacs/topology/atoms.h"
 #include "data_structures.h"
 #include "interpolation.h"
+#include "sfunction.h"
 
 
 void fhmd_do_update_md(int start, int nrend,
@@ -83,6 +84,9 @@ void fhmd_do_update_md(int start, int nrend,
                             nbr[0], nbr[1], nbr[2], nbr[3], nbr[4], nbr[5], nbr[6], nbr[7], xi[0], xi[1], xi[2]);
 #endif
 
+                if(fh->S < 0)
+                    S = Sxyz_r(x[n], fh);
+
                 if (cTC)
                 {
                     gt = cTC[n];
@@ -94,7 +98,7 @@ void fhmd_do_update_md(int start, int nrend,
                  /* vn           = lg*v[n][d] + f[n][d]*w_dt; */
                  /* v[n][d]      = vn; */
                  /* xprime[n][d] = x[n][d] + vn*dt; */
-                    vn           = lg*v[n][d] + (1 - S)*f[n][d]*w_dt + (S*f_fh[d] + alpha_term[d] + beta_term[d])*invro_dt;
+                    vn           = lg*v[n][d] + (1 - S)*f[n][d]*w_dt + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*invro_dt;
                     v[n][d]      = vn;
                     xprime[n][d] = x[n][d] + ((1 - S)*vn + S*u_fh[d])*dt + S*(1 - S)*grad_ro[d]*invro_dt;
                 }
