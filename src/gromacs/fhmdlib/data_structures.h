@@ -11,6 +11,10 @@
 #include "gromacs/gmxlib/network.h"     /* GROMACS MPI functions, gmx_bcast(), gmx_sumf(), etc. */
 #include "gromacs/math/vectypes.h"      /* GROMACS vector types: rvec, dvec, ivec, etc. */
 #include "gromacs/math/vec.h"           /* GROMACS vector operations: copy_ivec, dvec_add, etc. */
+//#include "gromacs/topology/topology.h"  /**/
+
+#include "gromacs/topology/mtop_util.h"
+#include "gromacs/topology/topology.h"
 
 
 typedef struct FH_arrays                /* FH/MD arrays */
@@ -77,7 +81,7 @@ typedef struct FHMD
     ivec       *indv;           /* 3-component FH cell number for each atom (vector) */
     double     *mpi_linear;     /* Linear array to summarise MDFH arrays */
 
-    double      S;              /* Parameter S (-1 if S is variable) */
+    double      S;              /* Parameter S (-1 - fixed sphere, -2 - moving sphere) */
     double      R1;             /* MD sphere radius for variable S, [0..1] */
     double      R2;             /* FH sphere radius for variable S, [0..1] */
     double      Smin;           /* Minimum S for variable S */
@@ -89,6 +93,7 @@ typedef struct FHMD
     ivec        N;              /* Number of FH cells along each direction */
     dvec        box;            /* Box size */
     dvec        box05;          /* Half of box size */
+    dvec        protein_com;    /* Protein COM coordinates */
     double      box_volume;     /* Volume of the box, nm^3 */
     double      total_density;  /* Total density of the box, a.m.u./nm^3 */
     int         Ntot;           /* Total number of FH cells */

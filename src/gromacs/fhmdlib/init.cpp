@@ -60,7 +60,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
 
         fprintf(fw, "; Hybrid Molecular Dynamics - 2-Way Coupling Parallel VERSION %4.2f\n\n", FHMD_VERSION);
 
-        fprintf(fw, "S = %g                   ; Parameter S (-1 if S is variable)\n\n", fh->S);
+        fprintf(fw, "S = %g                   ; Parameter S (-1 - fixed sphere, -2 - moving sphere)\n\n", fh->S);
         fprintf(fw, "R1   = %g              ; MD sphere radius for variable S, [0..1]\n", fh->R1);
         fprintf(fw, "R2   = %g              ; FH sphere radius for variable S, [0..1]\n", fh->R2);
         fprintf(fw, "Smin = %g                ; Minimum S for variable S\n", fh->Smin);
@@ -76,6 +76,9 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
             fh->R22 = fh->R2*fh->R2;
             fh->RS  = (fh->Smax - fh->Smin)/(fh->R2 - fh->R1);
             printf(MAKE_GREEN "FHMD: Absolute values of R [nm]: R1 = %f, R2 = %f\n", fh->R1, fh->R2);
+
+            if(fh->S < -1)
+                printf(MAKE_PURPLE "FHMD: The MD/FH sphere will follow protein\n");
         }
 
         printf(MAKE_GREEN "FHMD: alpha = %g [nm^2/ps], beta = %g [ps^-1]\n", fh->alpha, fh->beta);
@@ -84,8 +87,9 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
 
         for(int d = 0; d < DIM; d++)
         {
-            fh->box[d]   = box[d][d];
-            fh->box05[d] = 0.5*fh->box[d];
+            fh->box[d]         = box[d][d];
+            fh->box05[d]       = 0.5*fh->box[d];
+            fh->protein_com[d] = fh->box05[d];
         }
 
         fh->box_volume = fh->box[0]*fh->box[1]*fh->box[2];

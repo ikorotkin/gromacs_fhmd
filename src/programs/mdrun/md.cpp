@@ -134,6 +134,7 @@
 #include "gromacs/fhmdlib/output.h"
 #include "gromacs/fhmdlib/fh_functions.h"
 #include "gromacs/fhmdlib/estimate.h"
+#include "gromacs/fhmdlib/sfunction.h"
 
 using gmx::SimulationSignaller;
 
@@ -1481,6 +1482,12 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                     fhmd_sum_arrays(cr, &fhmd);                             // for selected arrays
                     gmx_bcast(sizeof(FH_arrays)*fhmd.Ntot, fhmd.arr, cr);   // actually we need this for pure FH arrays only
                 }
+
+                /*
+                 * FHMD: Find protein COM if necessary
+                 */
+                if(fhmd.S < -1)
+                    fhmd_find_protein_com(top_global, mdatoms->homenr, state->x, mdatoms->massT, cr, &fhmd);
 
                 /*
                  * FHMD: Estimate MD/FH coupling terms

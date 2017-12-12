@@ -78,14 +78,16 @@ void fhmd_do_update_md(int start, int nrend,
                 trilinear_interpolation(grad_ro,    xi, INTERPOLATE(grad_ro));
 
 #ifdef FHMD_DEBUG_INTERPOL
-                if(!(n % 10000) && !(fh->step_MD % 50))
+                if(!(n % 10000) && !(fh->step_MD % 100))
                     printf("\nStep %d, atom #%d (%g %g %g): %g %g %g\nneighbour cells: %d %d %d %d %d %d %d %d\nrescaled coordinates: %g %g %g\n",
                             fh->step_MD, n, x[n][0], x[n][1], x[n][2], u_fh[0], u_fh[1], u_fh[2],
                             nbr[0], nbr[1], nbr[2], nbr[3], nbr[4], nbr[5], nbr[6], nbr[7], xi[0], xi[1], xi[2]);
 #endif
 
-                if(fh->S < 0)
-                    S = Sxyz_r(x[n], fh);
+                if(fh->S < -1)
+                    S = fhmd_Sxyz_r(x[n], fh->protein_com, fh);     // MD/FH sphere follows protein
+                else if(fh->S < 0)
+                    S = fhmd_Sxyz_r(x[n], fh->box05, fh);           // Fixed MD/FH sphere
 
                 if (cTC)
                 {
