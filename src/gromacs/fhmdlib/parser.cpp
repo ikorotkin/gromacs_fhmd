@@ -17,7 +17,9 @@ int parse_prm(char const *fname, FHMD *fh)
     {
         if(line[0] == c) skip_line(fprm);   // skip comment
 
-        if(!strcmp(line, "S") || !strcmp(line, "s"))
+        if(!strcmp(line, "Scheme") || !strcmp(line, "scheme"))
+            ok = assign_int_value(&fh->scheme, line, fprm);
+        else if(!strcmp(line, "S") || !strcmp(line, "s"))
             ok = assign_double_value(&fh->S, line, fprm);
         else if(!strcmp(line, "R1"))
             ok = assign_double_value(&fh->R1, line, fprm);

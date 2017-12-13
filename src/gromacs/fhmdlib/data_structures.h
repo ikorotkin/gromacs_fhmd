@@ -79,6 +79,7 @@ typedef struct FHMD
     ivec       *indv;           /* 3-component FH cell number for each atom (vector) */
     double     *mpi_linear;     /* Linear array to summarise MDFH arrays */
 
+    int         scheme;         /* 0 - Pure MD, 1 - One-way coupling, 2 - Two-way coupling */
     double      S;              /* Parameter S (-1 - fixed sphere, -2 - moving sphere) */
     double      R1;             /* MD sphere radius for variable S, [0..1] */
     double      R2;             /* FH sphere radius for variable S, [0..1] */

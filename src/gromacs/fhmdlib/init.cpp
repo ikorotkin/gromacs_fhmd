@@ -9,6 +9,8 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, gmx_mtop_t *mt
 {
     if(MASTER(cr))
     {
+        int pure_md = 0;
+
         char const *fname_in  = "coupling.prm";
         char const *fname_out = "coupling_out.prm";
 
@@ -20,6 +22,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, gmx_mtop_t *mt
 
         /* Default values of FHMD parameters */
 
+        fh->scheme      = 1;
         fh->S           = 0;
         fh->R1          = 0.5;
         fh->R2          = 0.9;
@@ -61,11 +64,26 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, gmx_mtop_t *mt
 
         fprintf(fw, "; Hybrid Molecular Dynamics - 2-Way Coupling Parallel VERSION %4.2f\n\n", FHMD_VERSION);
 
+        fprintf(fw, "scheme = %d              ; 0 - Pure MD, 1 - One-way coupling, 2 - Two-way coupling\n\n", fh->scheme);
+
         fprintf(fw, "S = %g                   ; Parameter S (-1 - fixed sphere, -2 - moving sphere)\n\n", fh->S);
         fprintf(fw, "R1   = %g              ; MD sphere radius for variable S, [0..1]\n", fh->R1);
         fprintf(fw, "R2   = %g              ; FH sphere radius for variable S, [0..1]\n", fh->R2);
         fprintf(fw, "Smin = %g                ; Minimum S for variable S\n", fh->Smin);
         fprintf(fw, "Smax = %g             ; Maximum S for variable S\n\n", fh->Smax);
+
+        switch(fh->scheme)
+        {
+        case Pure_MD:
+            printf(MAKE_RED "FHMD: Starting Pure MD simulation (without MD/FH coupling)\n" RESET_COLOR "\n");
+            pure_md = 1;
+            break;
+        case One_Way:
+            printf(MAKE_YELLOW "FHMD: One-way MD/FH coupling\n" RESET_COLOR "\n");
+            break;
+        case Two_Way:
+            break;
+        }
 
         if(fh->S >= 0.0) {
             printf(MAKE_PURPLE "FHMD: S = %g\n", fh->S);
@@ -140,6 +158,8 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, gmx_mtop_t *mt
 
         fflush(stdout);
         fclose(fw);
+
+        if(pure_md) return 0;   // Start pure MD simulation
 
         /* TODO: Open files for writing */
 
