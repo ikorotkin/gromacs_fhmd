@@ -6,7 +6,7 @@
 
 double fhmd_Sxyz_r(const rvec x, const dvec c, FHMD *fh)
 {
-    rvec xd;
+    dvec xd;
 
     for(int d = 0; d < DIM; d++)
     {
@@ -23,6 +23,14 @@ double fhmd_Sxyz_r(const rvec x, const dvec c, FHMD *fh)
 
     return (r - fh->R1)*fh->RS + fh->Smin;                      // Linear interpolation from Smin to Smax
 //  return tanh(((r - hhmd->R1)*hhmd->RS - 0.5)*6.0)*0.5 + 0.5; // Smoother interpolation
+}
+
+
+double fhmd_Sxyz_d(const dvec x, const dvec c, FHMD *fh)
+{
+    rvec xr;
+    copy_dvec_to_rvec(x, xr);
+    return fhmd_Sxyz_r(xr, c, fh);
 }
 
 
@@ -76,7 +84,7 @@ void fhmd_find_protein_com(gmx_mtop_t *mtop, int N_atoms, rvec x[], real mass[],
     dvec   r, rm;
     double xd;
 
-    ZERO(rm);
+    clear_dvec(rm);
 
     for(int n = 0; n < N_atoms; n++)
     {

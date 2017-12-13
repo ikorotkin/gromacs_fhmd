@@ -1,4 +1,5 @@
 #include "data_structures.h"
+#include "sfunction.h"
 #include "macro.h"
 
 
@@ -90,7 +91,7 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
 void fhmd_calculate_MDFH_terms(FHMD *fh)
 {
     FH_arrays *arr = fh->arr;
-    double       S = 0; //fh->S; TODO: Remove alpha-term at all?
+    double     S   = fh->S;     // TODO: Remove alpha-term at all?
 
     ivec ind;
     dvec alpha_term;
@@ -123,6 +124,11 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
             for(int i = 0; i < NX; i++)
             {
                 ASSIGN_IND(ind, i, j, k);
+
+                if(fh->S < -1)
+                    S = fhmd_Sxyz_d(fh->grid.c[C], fh->protein_com, fh);    // MD/FH sphere follows protein
+                else if(fh->S < 0)
+                    S = fhmd_Sxyz_d(fh->grid.c[C], fh->box05, fh);          // Fixed MD/FH sphere
 
                 for(int d = 0; d < DIM; d++)
                 {

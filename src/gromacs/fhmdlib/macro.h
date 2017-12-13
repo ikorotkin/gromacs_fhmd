@@ -21,8 +21,6 @@
 
 #define SUM(f)  (f[0] + f[1] + f[2])
 
-#define ZERO(f) {f[0] = 0; f[1] = 0; f[2] = 0;}
-
 #define ASSIGN_IND(ind, i, j, k) \
     ind[0] = i; \
     ind[1] = j; \

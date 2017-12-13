@@ -3,6 +3,7 @@
 #include "data_structures.h"
 #include "interpolation.h"
 #include "sfunction.h"
+#include "macro.h"
 
 
 void fhmd_do_update_md(int start, int nrend,
@@ -71,7 +72,7 @@ void fhmd_do_update_md(int start, int nrend,
 
                 trilinear_find_neighbours(x[n], n, xi, nbr, fh);
 
-                trilinear_interpolation(f_fh,       xi, INTERPOLATE(f_fh));
+                clear_dvec(f_fh); // trilinear_interpolation(f_fh,       xi, INTERPOLATE(f_fh)); -- for 1-way coupling
                 trilinear_interpolation(u_fh,       xi, INTERPOLATE(u_fh));
                 trilinear_interpolation(alpha_term, xi, INTERPOLATE(alpha_term));
                 trilinear_interpolation(beta_term,  xi, INTERPOLATE(beta_term));
@@ -93,7 +94,7 @@ void fhmd_do_update_md(int start, int nrend,
                 {
                     gt = cTC[n];
                 }
-                lg = tcstat[gt].lambda;         // Thermostat
+                lg = tcstat[gt].lambda;                             // Thermostat
 
                 for (d = 0; d < DIM; d++)
                 {
