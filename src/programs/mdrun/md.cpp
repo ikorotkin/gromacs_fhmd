@@ -814,7 +814,7 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
     /*
      * FHMD Initialization
      */
-    int is_fhmd = fhmd_init(state->box, mdatoms->homenr, mdatoms->massT, ir->delta_t, cr, &fhmd);
+    int is_fhmd = fhmd_init(state->box, mdatoms->homenr, mdatoms->massT, ir->delta_t, top_global, cr, &fhmd);
 
     /* and stop now if we should */
     bLastStep = (bLastStep || (ir->nsteps >= 0 && step_rel > ir->nsteps));

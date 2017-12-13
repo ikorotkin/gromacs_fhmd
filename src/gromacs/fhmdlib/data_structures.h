@@ -7,41 +7,39 @@
 #include <math.h>
 
 #include "params.h"
-#include "gromacs/mdtypes/commrec.h"    /* GROMACS MPI definitions, 't_commrec', MASTER(), PAR(), etc. */
-#include "gromacs/gmxlib/network.h"     /* GROMACS MPI functions, gmx_bcast(), gmx_sumf(), etc. */
-#include "gromacs/math/vectypes.h"      /* GROMACS vector types: rvec, dvec, ivec, etc. */
-#include "gromacs/math/vec.h"           /* GROMACS vector operations: copy_ivec, dvec_add, etc. */
-//#include "gromacs/topology/topology.h"  /**/
-
-#include "gromacs/topology/mtop_util.h"
-#include "gromacs/topology/topology.h"
+#include "gromacs/topology/topology.h"      /* GROMACS gmx_mtop_t  structure definition */
+#include "gromacs/domdec/domdec_struct.h"   /* GROMACS gmx_domdec_t structure definition */
+#include "gromacs/mdtypes/commrec.h"        /* GROMACS MPI definitions, 't_commrec', MASTER(), PAR(), etc. */
+#include "gromacs/gmxlib/network.h"         /* GROMACS MPI functions, gmx_bcast(), gmx_sumf(), etc. */
+#include "gromacs/math/vectypes.h"          /* GROMACS vector types: rvec, dvec, ivec, etc. */
+#include "gromacs/math/vec.h"               /* GROMACS vector operations: copy_ivec, dvec_add, etc. */
 
 
-typedef struct FH_arrays                /* FH/MD arrays */
+typedef struct FH_arrays                    /* FH/MD arrays */
 {
-    double      ro_md, ro_fh;           /* densities */
-    double      inv_ro;                 /* inverse density: 1/ro_md */
-    dvec        u_md, u_fh;             /* velocities */
-    dvec        uro_md;                 /* momentum */
-    dvec        f_fh;                   /* FH force */
-    dvec        alpha_term;             /* alpha term for du/dt equation */
-    dvec        beta_term;              /* beta term for du/dt equation */
+    double      ro_md, ro_fh;               /* densities */
+    double      inv_ro;                     /* inverse density: 1/ro_md */
+    dvec        u_md, u_fh;                 /* velocities */
+    dvec        uro_md;                     /* momentum */
+    dvec        f_fh;                       /* FH force */
+    dvec        alpha_term;                 /* alpha term for du/dt equation */
+    dvec        beta_term;                  /* beta term for du/dt equation */
 
-    double      delta_ro;               /* delta rho for 1-way coupling or ro_prime for 2-way */
-    dvec        grad_ro;                /* grad of density */
-    matrix      alpha_u_grad;           /* preliminary alpha-term [u-index][grad-index] */
+    double      delta_ro;                   /* delta rho for 1-way coupling or ro_prime for 2-way */
+    dvec        grad_ro;                    /* grad of density */
+    matrix      alpha_u_grad;               /* preliminary alpha-term [u-index][grad-index] */
 
-    double      ro_prime, ron_prime;    /* density prime */
-    double      ro_star, ron_star;      /* density star */
-    dvec        m_prime, mn_prime;      /* m prime */
-    dvec        m_star, mn_star;        /* m star */
+    double      ro_prime, ron_prime;        /* density prime */
+    double      ro_star, ron_star;          /* density star */
+    dvec        m_prime, mn_prime;          /* m prime */
+    dvec        m_star, mn_star;            /* m star */
 
-    double      p, pn;                  /* FH pressure */
-    dvec        rof, rofn, pf, pfn;     /* FH flux variables */
-    matrix      uf, ufn;                /* FH flux velocities */
-    double      ro_fh_n;                /* FH density (new time layer) */
-    dvec        u_fh_n;                 /* FH velocity (new time layer) */
-    matrix      rans;                   /* FH random stress */
+    double      p, pn;                      /* FH pressure */
+    dvec        rof, rofn, pf, pfn;         /* FH flux variables */
+    matrix      uf, ufn;                    /* FH flux velocities */
+    double      ro_fh_n;                    /* FH density (new time layer) */
+    dvec        u_fh_n;                     /* FH velocity (new time layer) */
+    matrix      rans;                       /* FH random stress */
 } FH_arrays;
 
 
@@ -94,6 +92,8 @@ typedef struct FHMD
     dvec        box;            /* Box size */
     dvec        box05;          /* Half of box size */
     dvec        protein_com;    /* Protein COM coordinates */
+    double      protein_mass;   /* Protein mass */
+    int         protein_N;      /* Number of atoms in the protein */
     double      box_volume;     /* Volume of the box, nm^3 */
     double      total_density;  /* Total density of the box, a.m.u./nm^3 */
     int         Ntot;           /* Total number of FH cells */

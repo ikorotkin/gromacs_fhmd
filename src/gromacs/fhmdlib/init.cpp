@@ -2,9 +2,10 @@
 #include "parser.h"
 #include "fh_functions.h"
 #include "estimate.h"
+#include "sfunction.h"
 
 
-int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr, FHMD *fh)
+int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, gmx_mtop_t *mtop, t_commrec *cr, FHMD *fh)
 {
     if(MASTER(cr))
     {
@@ -78,7 +79,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
             printf(MAKE_GREEN "FHMD: Absolute values of R [nm]: R1 = %f, R2 = %f\n", fh->R1, fh->R2);
 
             if(fh->S < -1)
-                printf(MAKE_PURPLE "FHMD: The MD/FH sphere will follow protein\n");
+                printf(MAKE_PURPLE "FHMD: The MD/FH sphere will follow the protein\n");
         }
 
         printf(MAKE_GREEN "FHMD: alpha = %g [nm^2/ps], beta = %g [ps^-1]\n", fh->alpha, fh->beta);
@@ -150,6 +151,8 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
     for(int i = 0; i < N_atoms; i++)
         fh->total_density += mass[i];
 
+    fhmd_find_protein(mtop, N_atoms, mass, cr, fh);
+
     /* Broadcast parameters to all threads */
 
     if(PAR(cr))
@@ -165,6 +168,10 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, t_commrec *cr,
     {
         printf(MAKE_GREEN "FHMD: Total number of atoms in the box: %d\n", N_atoms);
         printf("FHMD: Total density of the box: %g [amu/nm^3]\n", fh->total_density);
+
+        if(fh->protein_N > 0)
+            printf(MAKE_PURPLE "FHMD: Found protein: %d atoms, mass = %g [amu]\n", fh->protein_N, fh->protein_mass);
+
         printf(RESET_COLOR "\n");
         fflush(stdout);
     }
