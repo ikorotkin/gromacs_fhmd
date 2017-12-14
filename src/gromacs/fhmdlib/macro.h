@@ -12,6 +12,8 @@
 #define R       I3d(i,j,k,+1,d,fh->N)   /* Point [i+1][j][k] */
 #define CL      I3d(i,j,k,-1,d,fh->N)   /* Point [i-1][j][k] */
 #define CR      I3d(i,j,k,+1,d,fh->N)   /* Point [i+1][j][k] */
+#define LL      I3d(i,j,k,-1,d,fh->N)   /* Point [i-1][j][k] */
+#define RR      I3d(i,j,k,+2,d,fh->N)   /* Point [i+2][j][k] */
 
 #define L0      I3b(-1,j,k,d,fh->N)     /* Point [-1][j][k] */
 #define L1      I3b( 0,j,k,d,fh->N)     /* Point [0][j][k] */

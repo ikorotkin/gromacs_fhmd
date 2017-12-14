@@ -34,6 +34,9 @@ typedef struct FH_arrays                    /* FH/MD arrays */
     dvec        m_prime, mn_prime;          /* m prime */
     dvec        m_star, mn_star;            /* m star */
 
+    double      S;                          /* S parameter in the FH cell centres */
+    dvec        Sf;                         /* S parameter in the FH cell faces */
+
     double      p, pn;                      /* FH pressure */
     dvec        rof, rofn, pf, pfn;         /* FH flux variables */
     matrix      uf, ufn;                    /* FH flux velocities */

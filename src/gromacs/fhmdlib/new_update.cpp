@@ -72,7 +72,9 @@ void fhmd_do_update_md(int start, int nrend,
 
                 trilinear_find_neighbours(x[n], n, xi, nbr, fh);
 
-                clear_dvec(f_fh); // trilinear_interpolation(f_fh,       xi, INTERPOLATE(f_fh)); -- for 1-way coupling
+                clear_dvec(f_fh);
+                if(fh->scheme == Two_Way)
+                    trilinear_interpolation(f_fh,   xi, INTERPOLATE(f_fh));
                 trilinear_interpolation(u_fh,       xi, INTERPOLATE(u_fh));
                 trilinear_interpolation(alpha_term, xi, INTERPOLATE(alpha_term));
                 trilinear_interpolation(beta_term,  xi, INTERPOLATE(beta_term));

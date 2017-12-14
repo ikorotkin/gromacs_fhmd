@@ -34,6 +34,12 @@ double fhmd_Sxyz_d(const dvec x, const dvec c, FHMD *fh)
 }
 
 
+void FH_S(FHMD *fh)
+{
+    // TODO: estimate S in the cells and cell faces
+}
+
+
 /*
  ******************** Find protein molecule in the box ********************
  */
@@ -128,7 +134,7 @@ void fhmd_find_protein_com(gmx_mtop_t *mtop, int N_atoms, rvec x[], real mass[],
     PBC(fh->protein_com, pcom, fh->box);
 
 #ifdef FHMD_DEBUG_COM
-    if(MASTER(cr) && !(fh->step_MD % 100))
+    if(MASTER(cr) && !(fh->step_MD % 10000))
         printf("FHMD DEBUG: Protein COM position: %g, %g, %g\n", fh->protein_com[0], fh->protein_com[1], fh->protein_com[2]);
 #endif
 }

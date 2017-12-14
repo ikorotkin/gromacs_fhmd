@@ -1469,10 +1469,13 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 fhmd_update_MD_in_FH(state->x, state->v, mdatoms->massT, mdatoms->homenr, &fhmd);
 
                 /*
-                 * FHMD: For one-way coupling -- make full FH time step
+                 * FHMD: For one-way coupling - make full FH time step
                  */
-                if(MASTER(cr) && !(fhmd.step_MD % fhmd.FH_step))
-                    FH_do_single_timestep(&fhmd);
+                if(fhmd.scheme == One_Way)
+                {
+                    if(MASTER(cr) && !(fhmd.step_MD % fhmd.FH_step))
+                        FH_do_single_timestep(&fhmd);
+                }
 
                 /*
                  * FHMD: Broadcast new FH variables
@@ -1481,6 +1484,15 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 {
                     fhmd_sum_arrays(cr, &fhmd);                             // for selected arrays
                     gmx_bcast(sizeof(FH_arrays)*fhmd.Ntot, fhmd.arr, cr);   // actually we need this for pure FH arrays only
+                }
+
+                /*
+                 * FHMD: For two-way coupling - initialise FH solver
+                 */
+                if(fhmd.scheme == Two_Way)
+                {
+                    if(MASTER(cr))
+                        FH_init(&fhmd);
                 }
 
                 /*

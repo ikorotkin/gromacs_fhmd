@@ -108,12 +108,17 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
         for(int d = 0; d < DIM; d++)
             arr[i].u_md[d] = arr[i].uro_md[d]*arr[i].inv_ro;
 
-        // For 1-way coupling
-        arr[i].delta_ro = arr[i].ro_fh - arr[i].ro_md;
-        for(int d = 0; d < DIM; d++)
+        if(fh->scheme == One_Way)
         {
-            arr[i].f_fh[d]      = 0;
-            arr[i].beta_term[d] = fh->beta*(arr[i].u_fh[d]*arr[i].ro_fh - arr[i].uro_md[d]);
+            arr[i].delta_ro = arr[i].ro_fh - arr[i].ro_md;
+            for(int d = 0; d < DIM; d++)
+                arr[i].beta_term[d] = fh->beta*(arr[i].u_fh[d]*arr[i].ro_fh - arr[i].uro_md[d]);
+        }
+        else if(fh->scheme == Two_Way)
+        {
+            arr[i].delta_ro = arr[i].ron_prime;
+            for(int d = 0; d < DIM; d++)
+                arr[i].beta_term[d] = fh->beta*arr[i].mn_prime[d];
         }
     }
 

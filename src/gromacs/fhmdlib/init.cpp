@@ -161,8 +161,6 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, gmx_mtop_t *mt
 
         if(pure_md) return 0;   // Start pure MD simulation
 
-        /* TODO: Open files for writing */
-
     } // if(MASTER(cr))
 
     fhmd_reset_statistics(fh);
@@ -230,8 +228,11 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, gmx_mtop_t *mt
 
     if(MASTER(cr))
     {
-        FH_init(fh);
-        FH_equilibrate(fh);
+        if(fh->scheme == One_Way)
+        {
+            FH_init(fh);
+            FH_equilibrate(fh);
+        }
 
         printf(MAKE_GREEN "FHMD: Initialization finished. Starting MD/FH solver...\n" RESET_COLOR "\n");
         fflush(stdout);
