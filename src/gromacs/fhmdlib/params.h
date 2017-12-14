@@ -1,7 +1,7 @@
 #ifndef FHMD_PARAMS_H_
 #define FHMD_PARAMS_H_
 
-#define FHMD_VERSION            3.00            /* FHMD model version */
+#define FHMD_VERSION            1.00            /* FHMD model version */
 
 #define FHMD_MAX_LENGTH         1000.0          /* Maximum length scale [nm] -- for control purpose only */
 
