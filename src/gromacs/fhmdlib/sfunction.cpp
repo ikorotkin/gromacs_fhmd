@@ -34,9 +34,45 @@ double fhmd_Sxyz_d(const dvec x, const dvec c, FHMD *fh)
 }
 
 
+/*
+ ******************** Estimate S in the cells and cell faces ********************
+ */
 void FH_S(FHMD *fh)
 {
-    // TODO: estimate S in the cells and cell faces
+    dvec coords;
+
+    for(int i = 0; i < fh->Ntot; i++)
+    {
+        if(fh->S < -1)
+            fh->arr[i].S = fhmd_Sxyz_d(fh->grid.c[i], fh->protein_com, fh);     // MD/FH sphere follows protein
+        else if(fh->S < 0)
+            fh->arr[i].S = fhmd_Sxyz_d(fh->grid.c[i], fh->box05, fh);           // Fixed MD/FH sphere
+        else
+            fh->arr[i].S = fh->S;                                               // Constant S
+
+        for(int d = 0; d < DIM; d++)
+        {
+            switch(d)
+            {
+            case 0:
+                ASSIGN_DVEC(coords, fh->grid.n[i][0], fh->grid.c[i][1], fh->grid.c[i][2]);
+                break;
+            case 1:
+                ASSIGN_DVEC(coords, fh->grid.c[i][0], fh->grid.n[i][1], fh->grid.c[i][2]);
+                break;
+            case 2:
+                ASSIGN_DVEC(coords, fh->grid.c[i][0], fh->grid.c[i][1], fh->grid.n[i][2]);
+                break;
+            }
+
+            if(fh->S < -1)
+                fh->arr[i].Sf[d] = fhmd_Sxyz_d(coords, fh->protein_com, fh);    // MD/FH sphere follows protein
+            else if(fh->S < 0)
+                fh->arr[i].Sf[d] = fhmd_Sxyz_d(coords, fh->box05, fh);          // Fixed MD/FH sphere
+            else
+                fh->arr[i].Sf[d] = fh->S;                                       // Constant S
+        }
+    }
 }
 
 

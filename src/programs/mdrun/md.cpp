@@ -814,7 +814,7 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
     /*
      * FHMD Initialization
      */
-    int is_fhmd = fhmd_init(state->box, mdatoms->homenr, mdatoms->massT, ir->delta_t, top_global, cr, &fhmd);
+    int is_fhmd = fhmd_init(state->box, mdatoms->homenr, mdatoms->massT, state->x, ir->delta_t, top_global, cr, &fhmd);
 
     /* and stop now if we should */
     bLastStep = (bLastStep || (ir->nsteps >= 0 && step_rel > ir->nsteps));
@@ -1466,7 +1466,7 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 /*
                  * FHMD: Update MD variables in the FH cells
                  */
-                fhmd_update_MD_in_FH(state->x, state->v, mdatoms->massT, mdatoms->homenr, &fhmd);
+                fhmd_update_MD_in_FH(state->x, state->v, mdatoms->massT, f, mdatoms->homenr, &fhmd);
 
                 /*
                  * FHMD: For one-way coupling - make full FH time step
@@ -1487,19 +1487,30 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 }
 
                 /*
+                 * FHMD: Find protein COM if necessary
+                 */
+                if(fhmd.S < -1)
+                    fhmd_find_protein_com(top_global, mdatoms->homenr, state->x, mdatoms->massT, cr, &fhmd);
+
+                /*
                  * FHMD: For two-way coupling - initialise FH solver
                  */
                 if(fhmd.scheme == Two_Way)
                 {
                     if(MASTER(cr))
-                        FH_init(&fhmd);
+                    {
+                        if(fhmd.step_MD == 0)
+                        {
+                            FH_init(&fhmd);
+                            FH_predictor(&fhmd);
+                        }
+                        else if(!(fhmd.step_MD % fhmd.FH_step))
+                        {
+                            FH_corrector(&fhmd);
+                            FH_predictor(&fhmd);
+                        }
+                    }
                 }
-
-                /*
-                 * FHMD: Find protein COM if necessary
-                 */
-                if(fhmd.S < -1)
-                    fhmd_find_protein_com(top_global, mdatoms->homenr, state->x, mdatoms->massT, cr, &fhmd);
 
                 /*
                  * FHMD: Estimate MD/FH coupling terms

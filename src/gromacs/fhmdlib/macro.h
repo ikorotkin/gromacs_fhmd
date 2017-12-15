@@ -28,6 +28,11 @@
     ind[1] = j; \
     ind[2] = k;
 
+#define ASSIGN_DVEC(vec, x, y, z) \
+    vec[0] = x; \
+    vec[1] = y; \
+    vec[2] = z;
+
 
 static void PBC(dvec xn, const rvec x, const dvec box)
 {

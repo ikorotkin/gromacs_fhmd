@@ -34,6 +34,10 @@ typedef struct FH_arrays                    /* FH/MD arrays */
     dvec        m_prime, mn_prime;          /* m prime */
     dvec        m_star, mn_star;            /* m star */
 
+    dvec        fs_md;                      /* (1-S)*F_MD */
+    dvec        uros_md;                    /* (1-S)*u_MD*rho_MD */
+    matrix      uuros_md;                   /* (1-S)*ui_MD*uj_MD*rho_MD */
+
     double      S;                          /* S parameter in the FH cell centres */
     dvec        Sf;                         /* S parameter in the FH cell faces */
 

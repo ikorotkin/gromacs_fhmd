@@ -5,7 +5,7 @@
 #include "sfunction.h"
 
 
-int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, gmx_mtop_t *mtop, t_commrec *cr, FHMD *fh)
+int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_mtop_t *mtop, t_commrec *cr, FHMD *fh)
 {
     if(MASTER(cr))
     {
@@ -28,8 +28,8 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, gmx_mtop_t *mt
         fh->R2          = 0.9;
         fh->Smin        = 0;
         fh->Smax        = 0.99;
-        fh->alpha       = 1000;
-        fh->beta        = 1000;
+        fh->alpha       = 100;
+        fh->beta        = 100;
         fh->N[0]        = 5;
         fh->N[1]        = 5;
         fh->N[2]        = 5;
@@ -101,8 +101,8 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, gmx_mtop_t *mt
         }
 
         printf(MAKE_GREEN "FHMD: alpha = %g [nm^2/ps], beta = %g [ps^-1]\n", fh->alpha, fh->beta);
-        fprintf(fw, "alpha = %g            ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps\n", fh->alpha);
-        fprintf(fw, "beta  = %g            ; Beta parameter for du/dt equation, ps^-1\n\n", fh->beta);
+        fprintf(fw, "alpha = %g             ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps\n", fh->alpha);
+        fprintf(fw, "beta  = %g             ; Beta parameter for du/dt equation, ps^-1\n\n", fh->beta);
 
         for(int d = 0; d < DIM; d++)
         {
@@ -143,8 +143,9 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, gmx_mtop_t *mt
         printf("FHMD: FH time step dt_FH = %d * dt_MD = %g [ps]\n", fh->FH_step, fh->dt_FH);
         fprintf(fw, "FH_step  = %d           ; FH time step dt_FH = FH_step * dt_MD\n", fh->FH_step);
 
+        if(fh->scheme == Two_Way) fh->FH_equil = 0;
         printf("FHMD: FH equilibration steps: %d\n", fh->FH_equil);
-        fprintf(fw, "FH_equil = %d        ; Number of time steps for the FH model equilibration\n", fh->FH_equil);
+        fprintf(fw, "FH_equil = %d        ; Number of time steps for the FH model equilibration (for 1-way coupling)\n", fh->FH_equil);
 
         printf("FHMD: FH Density = %g [amu/nm^3], FH Temperature = %g [K]\n", fh->FH_dens, fh->FH_temp);
         fprintf(fw, "FH_dens  = %g      ; FH mean density\n", fh->FH_dens);
@@ -170,6 +171,8 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, gmx_mtop_t *mt
         fh->total_density += mass[i];
 
     fhmd_find_protein(mtop, N_atoms, mass, cr, fh);
+    if(fh->protein_N)
+        fhmd_find_protein_com(mtop, N_atoms, x, mass, cr, fh);
 
     /* Broadcast parameters to all threads */
 
@@ -188,7 +191,8 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, gmx_mtop_t *mt
         printf("FHMD: Total density of the box: %g [amu/nm^3]\n", fh->total_density);
 
         if(fh->protein_N > 0)
-            printf(MAKE_PURPLE "FHMD: Found protein: %d atoms, mass = %g [amu]\n", fh->protein_N, fh->protein_mass);
+            printf(MAKE_PURPLE "FHMD: Found protein: %d atoms, mass = %g [amu], COM = (%g, %g, %g) [nm]\n",
+                    fh->protein_N, fh->protein_mass, fh->protein_com[0], fh->protein_com[1], fh->protein_com[2]);
 
         printf(RESET_COLOR "\n");
         fflush(stdout);
@@ -200,7 +204,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], double dt_md, gmx_mtop_t *mt
     fh->ind  = (int*)calloc(N_atoms, sizeof(int));
     fh->indv = (ivec*)calloc(N_atoms, sizeof(ivec));
 
-    fh->mpi_linear = (double*)malloc(4*fh->Ntot*sizeof(double));    // 4 components: ro_md, uro_md[3]
+    fh->mpi_linear = (double*)malloc(19*fh->Ntot*sizeof(double));   // 19 components: ro_md, uro_md[3], uros_md[3], fs_md[3], uuros_md[3][3]
 
     if(fh->arr == NULL || fh->ind == NULL || fh->indv == NULL || fh->mpi_linear == NULL)
     {

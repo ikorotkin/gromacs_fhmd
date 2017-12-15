@@ -33,6 +33,9 @@ gmx_inline static double DRNOR()
     return R11*cos(R22);
 }
 
+void compute_random_stress(FHMD *fh);
+void swap_var(FHMD *fh);
+
 
 double MU, KAPPA, EOS_A, EOS_B, EOS_C, EOS_D, EOS_E, P_INIT, SOUND, VISC1, VISC2;
 double T;

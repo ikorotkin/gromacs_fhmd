@@ -3,11 +3,12 @@
 #include "macro.h"
 
 
-void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], int N_atoms, FHMD *fh)
+void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms, FHMD *fh)
 {
     FH_arrays *arr = fh->arr;
     dvec       xn;
     int        ind;
+    double     S = fh->S;
 
     /* Reset statistics */
     for(int i = 0; i < fh->Ntot; i++)
@@ -16,7 +17,12 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], int N_atoms, FHMD *fh
 
         for(int d = 0; d < DIM; d++)
         {
-            arr[i].uro_md[d] = 0;
+            arr[i].uro_md[d]  = 0;
+            arr[i].uros_md[d] = 0;
+            arr[i].fs_md[d]   = 0;
+
+            for(int d1 = 0; d1 < DIM; d1++)
+                arr[i].uuros_md[d][d1] = 0;
         }
     }
 
@@ -42,9 +48,19 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], int N_atoms, FHMD *fh
 
         arr[ind].ro_md += mass[n];
 
+        if(fh->S < -1)
+            S = fhmd_Sxyz_r(x[n], fh->protein_com, fh);     // MD/FH sphere follows protein
+        else if(fh->S < 0)
+            S = fhmd_Sxyz_r(x[n], fh->box05, fh);           // Fixed MD/FH sphere
+
         for(int d = 0; d < DIM; d++)
         {
-            arr[ind].uro_md[d] += v[n][d]*mass[n];
+            arr[ind].uro_md[d]  += v[n][d]*mass[n];
+            arr[ind].uros_md[d] += v[n][d]*mass[n]*(1 - S);
+            arr[ind].fs_md[d]   += f[n][d]*(1 - S);
+
+            for(int d1 = 0; d1 < DIM; d1++)
+                arr[ind].uuros_md[d][d1] = v[n][d]*v[n][d1]*mass[n]*(1 - S);
         }
     }
 
@@ -55,7 +71,12 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], int N_atoms, FHMD *fh
 
         for(int d = 0; d < DIM; d++)
         {
-            arr[i].uro_md[d] *= fh->grid.ivol[i];
+            arr[i].uro_md[d]  *= fh->grid.ivol[i];
+            arr[i].uros_md[d] *= fh->grid.ivol[i];
+            arr[i].fs_md[d]   *= fh->grid.ivol[i];
+
+            for(int d1 = 0; d1 < DIM; d1++)
+                arr[ind].uuros_md[d][d1] *= fh->grid.ivol[i];
         }
     }
 }
@@ -72,10 +93,33 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
         fh->mpi_linear[i + fh->Ntot]   = arr[i].uro_md[0];
         fh->mpi_linear[i + fh->Ntot*2] = arr[i].uro_md[1];
         fh->mpi_linear[i + fh->Ntot*3] = arr[i].uro_md[2];
+
+        if(fh->scheme == Two_Way)
+        {
+            fh->mpi_linear[i + fh->Ntot*4] = arr[i].uros_md[0];
+            fh->mpi_linear[i + fh->Ntot*5] = arr[i].uros_md[1];
+            fh->mpi_linear[i + fh->Ntot*6] = arr[i].uros_md[2];
+            fh->mpi_linear[i + fh->Ntot*7] = arr[i].fs_md[0];
+            fh->mpi_linear[i + fh->Ntot*8] = arr[i].fs_md[1];
+            fh->mpi_linear[i + fh->Ntot*9] = arr[i].fs_md[2];
+
+            fh->mpi_linear[i + fh->Ntot*10] = arr[i].uuros_md[0][0];
+            fh->mpi_linear[i + fh->Ntot*11] = arr[i].uuros_md[1][0];
+            fh->mpi_linear[i + fh->Ntot*12] = arr[i].uuros_md[2][0];
+            fh->mpi_linear[i + fh->Ntot*13] = arr[i].uuros_md[0][1];
+            fh->mpi_linear[i + fh->Ntot*14] = arr[i].uuros_md[1][1];
+            fh->mpi_linear[i + fh->Ntot*15] = arr[i].uuros_md[2][1];
+            fh->mpi_linear[i + fh->Ntot*16] = arr[i].uuros_md[0][2];
+            fh->mpi_linear[i + fh->Ntot*17] = arr[i].uuros_md[1][2];
+            fh->mpi_linear[i + fh->Ntot*18] = arr[i].uuros_md[2][2];
+        }
     }
 
     /* Broadcast linear array */
-    gmx_sumd(fh->Ntot*4, fh->mpi_linear, cr);
+    if(fh->scheme == One_Way)
+        gmx_sumd(fh->Ntot*4, fh->mpi_linear, cr);
+    else if(fh->scheme == Two_Way)
+        gmx_sumd(fh->Ntot*19, fh->mpi_linear, cr);
 
     /* Unpack linear array */
     for(int i = 0; i < fh->Ntot; i++)
@@ -84,6 +128,26 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
         arr[i].uro_md[0] = fh->mpi_linear[i + fh->Ntot];
         arr[i].uro_md[1] = fh->mpi_linear[i + fh->Ntot*2];
         arr[i].uro_md[2] = fh->mpi_linear[i + fh->Ntot*3];
+
+        if(fh->scheme == Two_Way)
+        {
+            arr[i].uros_md[0] = fh->mpi_linear[i + fh->Ntot*4];
+            arr[i].uros_md[1] = fh->mpi_linear[i + fh->Ntot*5];
+            arr[i].uros_md[2] = fh->mpi_linear[i + fh->Ntot*6];
+            arr[i].fs_md[0]   = fh->mpi_linear[i + fh->Ntot*7];
+            arr[i].fs_md[1]   = fh->mpi_linear[i + fh->Ntot*8];
+            arr[i].fs_md[2]   = fh->mpi_linear[i + fh->Ntot*9];
+
+            arr[i].uuros_md[0][0] = fh->mpi_linear[i + fh->Ntot*10];
+            arr[i].uuros_md[1][0] = fh->mpi_linear[i + fh->Ntot*11];
+            arr[i].uuros_md[2][0] = fh->mpi_linear[i + fh->Ntot*12];
+            arr[i].uuros_md[0][1] = fh->mpi_linear[i + fh->Ntot*13];
+            arr[i].uuros_md[1][1] = fh->mpi_linear[i + fh->Ntot*14];
+            arr[i].uuros_md[2][1] = fh->mpi_linear[i + fh->Ntot*15];
+            arr[i].uuros_md[0][2] = fh->mpi_linear[i + fh->Ntot*16];
+            arr[i].uuros_md[1][2] = fh->mpi_linear[i + fh->Ntot*17];
+            arr[i].uuros_md[2][2] = fh->mpi_linear[i + fh->Ntot*18];
+        }
     }
 }
 
@@ -91,10 +155,11 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
 void fhmd_calculate_MDFH_terms(FHMD *fh)
 {
     FH_arrays *arr = fh->arr;
-    double     S   = fh->S;     // TODO: Remove alpha-term at all?
 
     ivec ind;
     dvec alpha_term;
+
+    FH_S(fh);   // Estimate S in the cells and cell faces
 
     for(int i = 0; i < fh->Ntot; i++)
     {
@@ -130,17 +195,12 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
             {
                 ASSIGN_IND(ind, i, j, k);
 
-                if(fh->S < -1)
-                    S = fhmd_Sxyz_d(fh->grid.c[C], fh->protein_com, fh);    // MD/FH sphere follows protein
-                else if(fh->S < 0)
-                    S = fhmd_Sxyz_d(fh->grid.c[C], fh->box05, fh);          // Fixed MD/FH sphere
-
                 for(int d = 0; d < DIM; d++)
                 {
                     arr[C].grad_ro[d] = fh->alpha*(arr[CR].delta_ro - arr[CL].delta_ro)/(0.5*(fh->grid.h[CL][d] + 2.0*fh->grid.h[C][d] + fh->grid.h[CR][d]));
 
                     for(int du = 0; du < DIM; du++)
-                        arr[C].alpha_u_grad[du][d] = arr[C].grad_ro[d]*S*(1 - S)*arr[C].u_md[du];    // TODO: Fast but rough estimation!
+                        arr[C].alpha_u_grad[du][d] = arr[C].grad_ro[d]*arr[C].S*(1 - arr[C].S)*arr[C].u_md[du];     // TODO: Fast but rough estimation!
                 }
             }
         }
