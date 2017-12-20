@@ -27,6 +27,6 @@ void fhmd_do_update_md(int start, int nrend,
                        unsigned short cACC[], unsigned short cTC[],
                        rvec x[], rvec xprime[], rvec v[],
                        rvec f[], matrix M,
-                       gmx_bool bNH, gmx_bool bPR, FHMD *fh);
+                       gmx_bool bNH, gmx_bool bPR, t_commrec *cr, FHMD *fh);
 
 #endif /* FHMD_NEW_UPDATE_H_ */

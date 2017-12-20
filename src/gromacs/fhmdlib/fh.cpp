@@ -189,7 +189,7 @@ void FH_predictor(FHMD *fh)
 
                 for(int dim = 0; dim < DIM; dim++)
                 {
-                    VISCOUS_FLUX(u_fh);     // UNIFORM GRID!
+                    VISCOUS_FLUX(u_fh);     // UNIFORM GRID! TODO: change to non-uniform
 
                     // Momentum flux, sources, viscous and random stress
                     for(int d = 0; d < DIM; d++)
@@ -296,7 +296,7 @@ void FH_corrector(FHMD *fh)
 
                 for(int dim = 0; dim < DIM; dim++)
                 {
-                    VISCOUS_FLUX(u_fh_n);     // UNIFORM GRID!
+                    VISCOUS_FLUX(u_fh_n);     // UNIFORM GRID! TODO: change to non-uniform
 
                     // Momentum flux, source, viscous and random stress
                     for(int d = 0; d < DIM; d++)
@@ -309,9 +309,6 @@ void FH_corrector(FHMD *fh)
                         TAU[d]    = (TAUR[dim][d] - TAUL[dim][d])/fh->grid.h[C][d];
                         TAURAN[d] = (arr[R].rans[dim][d] - arr[L].rans[dim][d])/fh->grid.h[C][d];
                     }
-
-                    // Beta-terms
-
 
                     // FH force
                     arr[C].f_fh[dim] = -PG[dim] + SUM(TAU) + SUM(TAURAN);

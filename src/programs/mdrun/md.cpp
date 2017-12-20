@@ -1483,7 +1483,7 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 if(PAR(cr))
                 {
                     fhmd_sum_arrays(cr, &fhmd);                             // for selected arrays
-                    gmx_bcast(sizeof(FH_arrays)*fhmd.Ntot, fhmd.arr, cr);   // actually we need this for pure FH arrays only
+                    gmx_bcast(sizeof(FH_arrays)*fhmd.Ntot, fhmd.arr, cr);   // actually we need this for the pure FH arrays only
                 }
 
                 /*

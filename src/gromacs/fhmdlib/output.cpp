@@ -53,5 +53,14 @@ void fhmd_dump_all(FHMD *fh)
     write_dump(grad_ro[0],    "grad_ro_X");
     write_dump(grad_ro[1],    "grad_ro_Y");
     write_dump(grad_ro[2],    "grad_ro_Z");
+
+    write_dump(ro_prime,      "ro_prime");
+    write_dump(ro_star,       "ro_star");
+    write_dump(m_prime[0],    "m_prime_X");
+    write_dump(m_prime[1],    "m_prime_Y");
+    write_dump(m_prime[2],    "m_prime_Z");
+    write_dump(m_star[0],     "m_star_X");
+    write_dump(m_star[1],     "m_star_Y");
+    write_dump(m_star[2],     "m_star_Z");
 #endif
 }

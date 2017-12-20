@@ -7,10 +7,12 @@
 
 int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_mtop_t *mtop, t_commrec *cr, FHMD *fh)
 {
+    int N_atoms_th = N_atoms;
+
+    FILE *fw;
+
     if(MASTER(cr))
     {
-        int pure_md = 0;
-
         char const *fname_in  = "coupling.prm";
         char const *fname_out = "coupling_out.prm";
 
@@ -30,13 +32,15 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
         fh->Smax        = 0.99;
         fh->alpha       = 100;
         fh->beta        = 100;
+        fh->gamma_x     = 0;
+        fh->gamma_u     = 0;
         fh->N[0]        = 5;
         fh->N[1]        = 5;
         fh->N[2]        = 5;
         fh->FH_EOS      = 1;
         fh->FH_step     = 10;
         fh->FH_equil    = 10000;
-        fh->FH_dens     = 602.181;
+        fh->FH_dens     = 600;
         fh->FH_temp     = 298.15;
         fh->FH_blend    = 0.005;
         fh->Noutput     = 10;
@@ -46,8 +50,6 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
         printf(MAKE_GREEN "FHMD: Reading parameters from %s..." RESET_COLOR " ", fname_in);
 
         int ok = parse_prm(fname_in, fh);
-
-        FILE *fw;
 
         if(ok == 1) {
             printf(MAKE_GREEN "...OK\n" RESET_COLOR "\n");
@@ -76,7 +78,6 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
         {
         case Pure_MD:
             printf(MAKE_RED "FHMD: Starting Pure MD simulation (without MD/FH coupling)\n" RESET_COLOR "\n");
-            pure_md = 1;
             break;
         case One_Way:
             printf(MAKE_YELLOW "FHMD: One-way MD/FH coupling\n" RESET_COLOR "\n");
@@ -101,8 +102,11 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
         }
 
         printf(MAKE_GREEN "FHMD: alpha = %g [nm^2/ps], beta = %g [ps^-1]\n", fh->alpha, fh->beta);
-        fprintf(fw, "alpha = %g             ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps\n", fh->alpha);
-        fprintf(fw, "beta  = %g             ; Beta parameter for du/dt equation, ps^-1\n\n", fh->beta);
+        printf("FHMD: gamma_x = %g [ps^-1], gamma_u = %g [ps^-1]\n", fh->gamma_x, fh->gamma_u);
+        fprintf(fw, "alpha   = %g           ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps\n", fh->alpha);
+        fprintf(fw, "beta    = %g           ; Beta parameter for du/dt equation, ps^-1\n", fh->beta);
+        fprintf(fw, "gamma_x = %g             ; Gamma_x parameter (density fluctuations dissipator), ps^-1\n", fh->gamma_x);
+        fprintf(fw, "gamma_u = %g             ; Gamma_u parameter (velocity fluctuations dissipator), ps^-1\n\n", fh->gamma_u);
 
         for(int d = 0; d < DIM; d++)
         {
@@ -148,7 +152,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
         fprintf(fw, "FH_equil = %d        ; Number of time steps for the FH model equilibration (for 1-way coupling)\n", fh->FH_equil);
 
         printf("FHMD: FH Density = %g [amu/nm^3], FH Temperature = %g [K]\n", fh->FH_dens, fh->FH_temp);
-        fprintf(fw, "FH_dens  = %g      ; FH mean density\n", fh->FH_dens);
+        fprintf(fw, "FH_dens  = %g          ; FH mean density\n", fh->FH_dens);
         fprintf(fw, "FH_temp  = %g       ; FH mean temperature\n", fh->FH_temp);
         fprintf(fw, "FH_blend = %g        ; FH Blending: -1 - dynamic, or define static blending parameter (0..1)\n\n", fh->FH_blend);
 
@@ -158,21 +162,13 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
         printf(RESET_COLOR "\n");
 
         fflush(stdout);
-        fclose(fw);
-
-        if(pure_md) return 0;   // Start pure MD simulation
-
     } // if(MASTER(cr))
 
     fhmd_reset_statistics(fh);
 
     fh->total_density = 0;
-    for(int i = 0; i < N_atoms; i++)
+    for(int i = 0; i < N_atoms_th; i++)
         fh->total_density += mass[i];
-
-    fhmd_find_protein(mtop, N_atoms, mass, cr, fh);
-    if(fh->protein_N)
-        fhmd_find_protein_com(mtop, N_atoms, x, mass, cr, fh);
 
     /* Broadcast parameters to all threads */
 
@@ -185,6 +181,10 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
 
     fh->total_density /= fh->box_volume;
 
+    fhmd_find_protein(mtop, N_atoms_th, mass, cr, fh);
+    if(fh->protein_N)
+        fhmd_find_protein_com(mtop, N_atoms_th, x, mass, cr, fh);
+
     if(MASTER(cr))
     {
         printf(MAKE_GREEN "FHMD: Total number of atoms in the box: %d\n", N_atoms);
@@ -196,7 +196,13 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
 
         printf(RESET_COLOR "\n");
         fflush(stdout);
+
+        fprintf(fw, "\n; You may consider to use FH_dens = %g since this is the total MD density of the box.\n", fh->total_density);
+        fprintf(fw, "; NB: Please use spaces before and after '=' in this file, e.g. 'S = 0' (not 'S=0').\n");
+        fclose(fw);
     }
+
+    if(fh->scheme == Pure_MD) return 0;     // Start Pure MD simulation
 
     /* Allocate memory */
 
@@ -222,6 +228,16 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
     if(fh->grid.c == NULL || fh->grid.n == NULL || fh->grid.h == NULL || fh->grid.vol == NULL || fh->grid.ivol == NULL)
     {
         if(MASTER(cr)) printf(MAKE_RED "\nFHMD: ERROR: Out of memory (FH grid allocator)\n" RESET_COLOR "\n");
+        fflush(stdout);
+        exit(3);
+    }
+
+    fh->stat.avg_rho_md_cell = (double*)calloc(fh->Ntot, sizeof(double));
+    fh->stat.avg_rho_fh_cell = (double*)calloc(fh->Ntot, sizeof(double));
+
+    if(fh->stat.avg_rho_md_cell == NULL || fh->stat.avg_rho_fh_cell == NULL)
+    {
+        if(MASTER(cr)) printf(MAKE_RED "\nFHMD: ERROR: Out of memory (Statistics allocator)\n" RESET_COLOR "\n");
         fflush(stdout);
         exit(3);
     }

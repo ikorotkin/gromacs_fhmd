@@ -28,14 +28,28 @@ void fhmd_collect_statistics(FHMD *fh)
     MD_stat   *st  = &fh->stat;
     FH_arrays *arr =  fh->arr;
 
+    static int n = 0;
+    double     invn;
+
+    n++;
+    invn = 1.0/(double)(n);
+
     for(int i = 0; i < fh->Ntot; i++)
     {
         st->N++;
 
+        st->avg_rho_md_cell[i] += arr[i].ro_md;
+        st->avg_rho_fh_cell[i] += arr[i].ro_fh;
+
         st->davg_rho_md  += arr[i].ro_md;
         st->davg_rho_fh  += arr[i].ro_fh;
+
         st->davg_rho2_md += (arr[i].ro_md - fh->total_density)*(arr[i].ro_md - fh->total_density);
         st->davg_rho2_fh += (arr[i].ro_fh - fh->FH_dens)*(arr[i].ro_fh - fh->FH_dens);
+
+        // More accurate estimation but much longer convergence
+        //st->davg_rho2_md += (arr[i].ro_md - st->avg_rho_md_cell[i]*invn)*(arr[i].ro_md - st->avg_rho_md_cell[i]*invn);
+        //st->davg_rho2_fh += (arr[i].ro_fh - st->avg_rho_fh_cell[i]*invn)*(arr[i].ro_fh - st->avg_rho_fh_cell[i]*invn);
 
         for(int d = 0; d < DIM; d++)
         {

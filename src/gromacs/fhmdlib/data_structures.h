@@ -65,6 +65,8 @@ typedef struct MD_stat          /* Particle statistics */
     int         N;
     double      invN;
 
+    double     *avg_rho_md_cell, *avg_rho_fh_cell;
+
     double      davg_rho_md,  davg_rho_fh;
     double      davg_rho2_md, davg_rho2_fh;
     dvec        davg_u_md,    davg_u_fh;
@@ -95,6 +97,8 @@ typedef struct FHMD
     double      R12, R22, RS;   /* Derived variables from R1, R2, Smin, Smax */
     double      alpha;          /* Alpha parameter for dx/dt and du/dt equations, nm^2/ps */
     double      beta;           /* Beta parameter, nm^2/ps or ps^-1 depending on the scheme */
+    double      gamma_x;        /* Gamma_x parameter (density fluctuations dissipator), ps^-1 */
+    double      gamma_u;        /* Gamma_u parameter (velocity fluctuations dissipator), ps^-1 */
 
     ivec        N;              /* Number of FH cells along each direction */
     dvec        box;            /* Box size */

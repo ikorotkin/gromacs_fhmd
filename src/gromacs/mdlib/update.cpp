@@ -1840,7 +1840,7 @@ void fhmd_update_coords(FILE        *fplog,
                                           md->invmass, md->ptype,
                                           md->cFREEZE, md->cACC, md->cTC,
                                           state->x, upd->xp, state->v, f, M,
-                                          bNH, bPR, fh);
+                                          bNH, bPR, cr, fh);
                     }
                     else
                     {
