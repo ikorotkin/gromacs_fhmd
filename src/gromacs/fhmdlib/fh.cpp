@@ -12,15 +12,15 @@ void FH_init(FHMD *fh)
     switch(fh->eos)
     {
     case eos_argon:
-        MU     = 0;
-        KAPPA  = 0;
-        EOS_A  = 0;
-        EOS_B  = 0;
-        EOS_C  = 0;
-        EOS_D  = 0;
-        EOS_E  = 0;
-        P_INIT = 0;
-        SOUND  = 0;
+        MU     = FHMD_EOS_ARGON_MU;
+        KAPPA  = FHMD_EOS_ARGON_KAPPA;
+        EOS_A  = FHMD_EOS_ARGON_A;
+        EOS_B  = FHMD_EOS_ARGON_B;
+        EOS_C  = FHMD_EOS_ARGON_C;
+        EOS_D  = FHMD_EOS_ARGON_D;
+        EOS_E  = FHMD_EOS_ARGON_E;
+        P_INIT = EOS_D*(1.0/3.0*EOS_A*EOS_A*pow(EOS_E*fh->FH_dens - EOS_B, 3) + EOS_C);
+        SOUND  = sqrt(EOS_D*EOS_A*EOS_A*EOS_E*pow(EOS_E*fh->FH_dens - EOS_B, 2));
         break;
     case eos_spce:
         MU     = FHMD_EOS_SPCE_MU;
@@ -35,8 +35,8 @@ void FH_init(FHMD *fh)
 
 #ifdef FHMD_DEBUG_FH
     printf(MAKE_YELLOW "FHMD DEBUG: MU = %g, KAPPA = %g\n", MU, KAPPA);
-    printf(MAKE_YELLOW "FHMD DEBUG: A = %g, B = %g, C = %g\n", EOS_A, EOS_B, EOS_C);
-    printf(MAKE_YELLOW "FHMD DEBUG: Initial Pressure = %g, Speed of Sound = %g\n", P_INIT, SOUND*1000.0);
+    printf(MAKE_YELLOW "FHMD DEBUG: A = %g, B = %g, C = %g, D = %g, E = %g\n", EOS_A, EOS_B, EOS_C, EOS_D, EOS_E);
+    printf(MAKE_YELLOW "FHMD DEBUG: Initial Pressure = %g [MPa], Speed of Sound = %g [m/s]\n", P_INIT/6.0221367e-1, SOUND*1000.0);
     printf(RESET_COLOR "\n");
 #endif
 
@@ -81,8 +81,8 @@ void FH_init(FHMD *fh)
                     switch(fh->eos)
                     {
                     case eos_argon:
-                        arr[C].p  = P_INIT;
-                        arr[C].pn = P_INIT;
+                        arr[C].p  = EOS_D*(1.0/3.0*EOS_A*EOS_A*pow(EOS_E*arr[C].ro_md - EOS_B, 3) + EOS_C);
+                        arr[C].pn = arr[C].p;
                         break;
                     case eos_spce:
                         arr[C].p  = arr[C].ro_md*(arr[C].ro_md*EOS_A + EOS_B) + EOS_C;
@@ -868,7 +868,7 @@ void FH_equilibrate(FHMD *fh)
            "Step", "STD rho", "STD Ux", "STD Uy", "STD Uz", "C_s, m/s", "T, K", "<T>, K", "<rho>", "<P>", "<Ux>", "<Uy>", "<Uz>", "blend");
     printf("---------------------------------------------------------------------------------------------------------------------------------------\n");
     printf(MAKE_LIGHT_BLUE "->       %9.4f %9.5f %9.5f %9.5f %9.2f %9.4f %9.4f %9.4f %9.4f      <- Theoretical Values",
-           STD_RHO, STD_U, STD_U, STD_U, SOUND*1000.0, fh->FH_temp, fh->FH_temp, fh->FH_dens, P_INIT);
+           STD_RHO, STD_U, STD_U, STD_U, SOUND*1000.0, fh->FH_temp, fh->FH_temp, fh->FH_dens, P_INIT/6.0221367e-1);
     printf(MAKE_BLUE "\n");
 
     while(STEP <= fh->FH_equil)
@@ -881,7 +881,7 @@ void FH_equilibrate(FHMD *fh)
 
             printf("\r%8d %9.4f %9.5f %9.5f %9.5f %9.2f %9.4f %9.4f %9.4f %9.4f %9.2e %9.2e %9.2e %6.4f",
                    STEP, std_rho, std_u[0], std_u[1], std_u[2], sound*1000.0, T_INST/(double)(fh->Ntot), avg_T,
-                   avg_rho, avg_p, avg_u[0], avg_u[1], avg_u[2], blend);
+                   avg_rho, avg_p/6.0221367e-1, avg_u[0], avg_u[1], avg_u[2], blend);
 
 #ifdef FHMD_DEBUG_FH
             printf("\n");

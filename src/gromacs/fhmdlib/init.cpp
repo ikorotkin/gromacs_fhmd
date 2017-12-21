@@ -181,9 +181,17 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
 
     fh->total_density /= fh->box_volume;
 
-    fhmd_find_protein(mtop, N_atoms_th, mass, cr, fh);
-    if(fh->protein_N)
-        fhmd_find_protein_com(mtop, N_atoms_th, x, mass, cr, fh);
+    if(fh->eos == eos_spce)
+    {
+        fhmd_find_protein(mtop, N_atoms_th, mass, cr, fh);
+        if(fh->protein_N)
+            fhmd_find_protein_com(mtop, N_atoms_th, x, mass, cr, fh);
+    }
+    else
+    {
+        fh->protein_N    = 0;
+        fh->protein_mass = 0;
+    }
 
     if(MASTER(cr))
     {
