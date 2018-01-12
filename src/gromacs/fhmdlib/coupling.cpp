@@ -18,11 +18,6 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms
         for(int d = 0; d < DIM; d++)
         {
             arr[i].uro_md[d]  = 0;
-            arr[i].uros_md[d] = 0;
-            arr[i].fs_md[d]   = 0;
-
-            for(int d1 = 0; d1 < DIM; d1++)
-                arr[i].uuros_md[d][d1] = 0;
         }
     }
 
@@ -56,11 +51,6 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms
         for(int d = 0; d < DIM; d++)
         {
             arr[ind].uro_md[d]  += v[n][d]*mass[n];
-            arr[ind].uros_md[d] += v[n][d]*mass[n]*(1 - S);
-            arr[ind].fs_md[d]   += f[n][d]*(1 - S);
-
-            for(int d1 = 0; d1 < DIM; d1++)
-                arr[ind].uuros_md[d][d1] = v[n][d]*v[n][d1]*mass[n]*(1 - S);
         }
     }
 
@@ -72,11 +62,6 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms
         for(int d = 0; d < DIM; d++)
         {
             arr[i].uro_md[d]  *= fh->grid.ivol[i];
-            arr[i].uros_md[d] *= fh->grid.ivol[i];
-            arr[i].fs_md[d]   *= fh->grid.ivol[i];
-
-            for(int d1 = 0; d1 < DIM; d1++)
-                arr[ind].uuros_md[d][d1] *= fh->grid.ivol[i];
         }
     }
 }
@@ -93,33 +78,10 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
         fh->mpi_linear[i + fh->Ntot]   = arr[i].uro_md[0];
         fh->mpi_linear[i + fh->Ntot*2] = arr[i].uro_md[1];
         fh->mpi_linear[i + fh->Ntot*3] = arr[i].uro_md[2];
-
-        if(fh->scheme == Two_Way)
-        {
-            fh->mpi_linear[i + fh->Ntot*4] = arr[i].uros_md[0];
-            fh->mpi_linear[i + fh->Ntot*5] = arr[i].uros_md[1];
-            fh->mpi_linear[i + fh->Ntot*6] = arr[i].uros_md[2];
-            fh->mpi_linear[i + fh->Ntot*7] = arr[i].fs_md[0];
-            fh->mpi_linear[i + fh->Ntot*8] = arr[i].fs_md[1];
-            fh->mpi_linear[i + fh->Ntot*9] = arr[i].fs_md[2];
-
-            fh->mpi_linear[i + fh->Ntot*10] = arr[i].uuros_md[0][0];
-            fh->mpi_linear[i + fh->Ntot*11] = arr[i].uuros_md[1][0];
-            fh->mpi_linear[i + fh->Ntot*12] = arr[i].uuros_md[2][0];
-            fh->mpi_linear[i + fh->Ntot*13] = arr[i].uuros_md[0][1];
-            fh->mpi_linear[i + fh->Ntot*14] = arr[i].uuros_md[1][1];
-            fh->mpi_linear[i + fh->Ntot*15] = arr[i].uuros_md[2][1];
-            fh->mpi_linear[i + fh->Ntot*16] = arr[i].uuros_md[0][2];
-            fh->mpi_linear[i + fh->Ntot*17] = arr[i].uuros_md[1][2];
-            fh->mpi_linear[i + fh->Ntot*18] = arr[i].uuros_md[2][2];
-        }
     }
 
     /* Broadcast linear array */
-    if(fh->scheme == One_Way)
-        gmx_sumd(fh->Ntot*4, fh->mpi_linear, cr);
-    else if(fh->scheme == Two_Way)
-        gmx_sumd(fh->Ntot*19, fh->mpi_linear, cr);
+    gmx_sumd(fh->Ntot*4, fh->mpi_linear, cr);
 
     /* Unpack linear array */
     for(int i = 0; i < fh->Ntot; i++)
@@ -128,26 +90,6 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
         arr[i].uro_md[0] = fh->mpi_linear[i + fh->Ntot];
         arr[i].uro_md[1] = fh->mpi_linear[i + fh->Ntot*2];
         arr[i].uro_md[2] = fh->mpi_linear[i + fh->Ntot*3];
-
-        if(fh->scheme == Two_Way)
-        {
-            arr[i].uros_md[0] = fh->mpi_linear[i + fh->Ntot*4];
-            arr[i].uros_md[1] = fh->mpi_linear[i + fh->Ntot*5];
-            arr[i].uros_md[2] = fh->mpi_linear[i + fh->Ntot*6];
-            arr[i].fs_md[0]   = fh->mpi_linear[i + fh->Ntot*7];
-            arr[i].fs_md[1]   = fh->mpi_linear[i + fh->Ntot*8];
-            arr[i].fs_md[2]   = fh->mpi_linear[i + fh->Ntot*9];
-
-            arr[i].uuros_md[0][0] = fh->mpi_linear[i + fh->Ntot*10];
-            arr[i].uuros_md[1][0] = fh->mpi_linear[i + fh->Ntot*11];
-            arr[i].uuros_md[2][0] = fh->mpi_linear[i + fh->Ntot*12];
-            arr[i].uuros_md[0][1] = fh->mpi_linear[i + fh->Ntot*13];
-            arr[i].uuros_md[1][1] = fh->mpi_linear[i + fh->Ntot*14];
-            arr[i].uuros_md[2][1] = fh->mpi_linear[i + fh->Ntot*15];
-            arr[i].uuros_md[0][2] = fh->mpi_linear[i + fh->Ntot*16];
-            arr[i].uuros_md[1][2] = fh->mpi_linear[i + fh->Ntot*17];
-            arr[i].uuros_md[2][2] = fh->mpi_linear[i + fh->Ntot*18];
-        }
     }
 }
 

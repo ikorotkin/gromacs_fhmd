@@ -102,8 +102,8 @@ void fhmd_do_update_md(int start, int nrend,
                 // Local thermostat
                 if(S > 0.9) lg = 1.0;       // Some constant here -- TODO: This should be adjusted
 
-                gamma_u = exp(-fh->gamma_u*S*S*dt);
-                gamma_x = exp(-fh->gamma_x*S*S*dt);
+                gamma_u = 1.0; //exp(-fh->gamma_u*S*S*dt);
+                gamma_x = 1.0; //exp(-fh->gamma_x*S*S*dt);
 
                 for (d = 0; d < DIM; d++)
                 {
@@ -113,6 +113,12 @@ void fhmd_do_update_md(int start, int nrend,
                     vn           = lg*v[n][d]*gamma_u + (1 - S)*f[n][d]*w_dt + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*invro_dt;
                     v[n][d]      = vn;
                     xprime[n][d] = x[n][d] + gamma_x*(((1 - S)*vn + S*u_fh[d])*dt + S*(1 - S)*grad_ro[d]*invro_dt);
+
+/*
+                    vn           = lg*v[n][d]*gamma_u + ((1 - S)*f[n][d]*invmass[n] + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*arr[ind].inv_ro)*(1 - 0.5*fh->gamma_u*S*S*dt)*dt;
+                    v[n][d]      = vn;
+                    xprime[n][d] = x[n][d] + (((1 - S)*vn + S*u_fh[d]) + S*(1 - S)*grad_ro[d]*arr[ind].inv_ro)*(1 - 0.5*fh->gamma_u*S*S*dt)*dt;
+*/
                 }
             }
             else
