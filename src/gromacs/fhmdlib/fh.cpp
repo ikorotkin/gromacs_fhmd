@@ -96,8 +96,6 @@ void FH_init(FHMD *fh)
                     {
                         arr[L].rof[d]     = 0.5*(arr[CL].ro_md + arr[C].ro_md);
                         arr[L].rofn[d]    = arr[L].rof[d];
-                        arr[L].pf[d]      = arr[L].rof[d]*(arr[L].rof[d]*EOS_A + EOS_B) + EOS_C;
-                        arr[L].pfn[d]     = arr[L].pf[d];
                         arr[C].m_star[d]  = arr[C].uro_md[d];
                         arr[C].mn_star[d] = arr[C].uro_md[d];
                         arr[C].u_fh[d]    = arr[C].uro_md[d]/arr[C].ro_md;
@@ -114,9 +112,21 @@ void FH_init(FHMD *fh)
                 }
             }
         }
-
-        FH_S(fh);   // Estimate S in the cells and cell faces
-
+        for(int k = 0; k < NZ; k++)
+        {
+            for(int j = 0; j < NY; j++)
+            {
+                for(int i = 0; i < NX; i++)
+                {
+                    ASSIGN_IND(ind, i, j, k);
+                    for(int d = 0; d < DIM; d++)
+                    {
+                        arr[L].pf[d]  = 0.5*(arr[CL].p + arr[C].p);
+                        arr[L].pfn[d] = arr[L].pf[d];
+                    }
+                }
+            }
+        }
         break;
     }
 
@@ -188,7 +198,7 @@ void FH_predictor(FHMD *fh)
                 arr[C].ron_star  = arr[C].ro_star  + 0.5*DT*(-SUM(FS) + SUM(QS)) + (1 - arr[C].S)*(arr[C].ro_md - arr[C].ros_md);
                 arr[C].ro_fh_n   = arr[C].ron_star + arr[C].ron_prime;
 
-                arr[C].ros_md    = arr[C].ro_md;
+                //arr[C].ros_md    = arr[C].ro_md;  TODO: Predictor is without counter!
 
                 for(int d = 0; d < DIM; d++)
                 {
@@ -227,7 +237,7 @@ void FH_predictor(FHMD *fh)
                             (1 - arr[C].S)*(arr[C].uro_md[dim] - arr[C].uros_md[dim]);
                     arr[C].u_fh_n[dim]   = (arr[C].mn_star[dim] + arr[C].mn_prime[dim])/arr[C].ro_fh_n;
 
-                    arr[C].uros_md[dim]  = arr[C].uro_md[dim];
+                    //arr[C].uros_md[dim]  = arr[C].uro_md[dim];   TODO: Predictor is without counter!
                 }
 
                 // Pressure
@@ -287,8 +297,8 @@ void FH_corrector(FHMD *fh)
                 for(int d = 0; d < DIM; d++)
                 {
                     // Mass flux
-                    FS[d] = (arr[R].Sf[d]*arr[R].ufn[d][d]*(arr[R].rof[d] - 0.5*(arr[CR].ro_prime + arr[C].ro_prime)) -
-                             arr[L].Sf[d]*arr[L].ufn[d][d]*(arr[L].rof[d] - 0.5*(arr[CL].ro_prime + arr[C].ro_prime)))/fh->grid.h[C][d];
+                    FS[d] = (arr[R].Sf[d]*arr[R].ufn[d][d]*(arr[R].rofn[d] - 0.5*(arr[CR].ro_prime + arr[C].ro_prime)) -
+                             arr[L].Sf[d]*arr[L].ufn[d][d]*(arr[L].rofn[d] - 0.5*(arr[CL].ro_prime + arr[C].ro_prime)))/fh->grid.h[C][d];
                     // Source
                     QS[d] = //-(arr[CR].uros_md[d] - arr[CL].uros_md[d])/(0.5*(fh->grid.h[CR][d] + 2.0*fh->grid.h[C][d] + fh->grid.h[CL][d])) -
                             -fh->alpha*

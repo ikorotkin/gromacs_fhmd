@@ -1489,7 +1489,7 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 /*
                  * FHMD: Find protein COM if necessary
                  */
-                if(fhmd.S < -1)
+                if(fhmd.S < -1.5)
                     fhmd_find_protein_com(top_global, mdatoms->homenr, state->x, mdatoms->massT, cr, &fhmd);
 
                 /*

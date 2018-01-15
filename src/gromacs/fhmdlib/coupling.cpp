@@ -10,6 +10,8 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms
     int        ind;
     double     S = fh->S;
 
+    FH_S(fh);       // Estimate S in the cells and cell faces
+
     /* Reset statistics */
     for(int i = 0; i < fh->Ntot; i++)
     {
@@ -100,8 +102,6 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
 
     ivec ind;
     dvec alpha_term;
-
-    FH_S(fh);   // Estimate S in the cells and cell faces
 
     for(int i = 0; i < fh->Ntot; i++)
     {
