@@ -78,7 +78,8 @@ void FH_init(FHMD *fh)
                     arr[C].ro_star  = arr[C].ro_md;
                     arr[C].ron_star = arr[C].ro_md;
 
-                    arr[C].ros_md   = arr[C].ro_md;
+                    arr[C].ros_md   = 0;
+                    arr[C].ropr_md  = arr[C].ro_md;
 
                     switch(fh->eos)
                     {
@@ -101,7 +102,8 @@ void FH_init(FHMD *fh)
                         arr[C].u_fh[d]    = arr[C].uro_md[d]/arr[C].ro_md;
                         arr[C].u_fh_n[d]  = arr[C].u_fh[d];
 
-                        arr[C].uros_md[d] = arr[C].uro_md[d];
+                        arr[C].uros_md[d]  = 0;
+                        arr[C].uropr_md[d] = arr[C].uro_md[d];
 
                         for(int d1 = 0; d1 < DIM; d1++)
                         {
@@ -187,18 +189,20 @@ void FH_predictor(FHMD *fh)
                     FS[d] = (arr[R].Sf[d]*arr[R].uf[d][d]*0.5*(arr[CR].ro_star + arr[C].ro_star) -
                              arr[L].Sf[d]*arr[L].uf[d][d]*0.5*(arr[CL].ro_star + arr[C].ro_star))/fh->grid.h[C][d];
                     // Source
-                    QS[d] = //-(arr[CR].uros_md[d] - arr[CL].uros_md[d])/(0.5*(fh->grid.h[CR][d] + 2.0*fh->grid.h[C][d] + fh->grid.h[CL][d])) -
-                            -fh->alpha*
+                    QS[d] = -fh->alpha*
                             (arr[R].Sf[d]*(1 - arr[R].Sf[d])*(arr[CR].ro_prime - arr[C].ro_prime)/(0.5*(fh->grid.h[CR][d] + fh->grid.h[C][d])) -
                              arr[L].Sf[d]*(1 - arr[L].Sf[d])*(arr[C].ro_prime - arr[CL].ro_prime)/(0.5*(fh->grid.h[CL][d] + fh->grid.h[C][d])))/fh->grid.h[C][d];
                 }
 
+                // MD source
+                arr[C].ros_md = (arr[C].ro_md - arr[C].ropr_md)*0.5;
+
                 // Mass conservation
                 arr[C].ron_prime = arr[C].ro_prime + 0.5*DT*(-SUM(FP) + SUM(QP));
-                arr[C].ron_star  = arr[C].ro_star  + 0.5*DT*(-SUM(FS) + SUM(QS)) + (1 - arr[C].S)*(arr[C].ro_md - arr[C].ros_md);
+                arr[C].ron_star  = arr[C].ro_star  + 0.5*DT*(-SUM(FS) + SUM(QS)) + (1 - arr[C].S)*arr[C].ros_md;
                 arr[C].ro_fh_n   = arr[C].ron_star + arr[C].ron_prime;
 
-                //arr[C].ros_md    = arr[C].ro_md;  TODO: Predictor is without counter!
+                arr[C].ropr_md = arr[C].ro_md;
 
                 for(int d = 0; d < DIM; d++)
                 {
@@ -218,8 +222,6 @@ void FH_predictor(FHMD *fh)
                         FS[d] = (arr[R].Sf[d]*arr[R].uf[d][d]*0.5*(arr[CR].m_star[dim] + arr[C].m_star[dim]) -
                                  arr[L].Sf[d]*arr[L].uf[d][d]*0.5*(arr[CL].m_star[dim] + arr[C].m_star[dim]))/fh->grid.h[C][d];
 
-                        QS[d] = 0; //-(arr[CR].uuros_md[dim][d] - arr[CL].uuros_md[dim][d])/(0.5*(fh->grid.h[CR][d] + 2.0*fh->grid.h[C][d] + fh->grid.h[CL][d]));
-
                         TAU[d]    = (TAUR[dim][d] - TAUL[dim][d])/fh->grid.h[C][d];
                         TAURAN[d] = (arr[R].rans[dim][d] - arr[L].rans[dim][d])/fh->grid.h[C][d];
                     }
@@ -231,13 +233,15 @@ void FH_predictor(FHMD *fh)
                     // FH force
                     arr[C].f_fh[dim] = -PG[dim] + SUM(TAU) + SUM(TAURAN);
 
+                    // MD source
+                    arr[C].uros_md[dim] = (arr[C].uro_md[dim] - arr[C].uropr_md[dim])*0.5;
+
                     // Momentum conservation
                     arr[C].mn_prime[dim] = arr[C].m_prime[dim] + 0.5*DT*(-SUM(FP) + BP);
-                    arr[C].mn_star[dim]  = arr[C].m_star[dim]  + 0.5*DT*(-SUM(FS) /*+ arr[C].fs_md[dim]*/ + arr[C].S*arr[C].f_fh[dim] + BS + SUM(QS)) +
-                            (1 - arr[C].S)*(arr[C].uro_md[dim] - arr[C].uros_md[dim]);
+                    arr[C].mn_star[dim]  = arr[C].m_star[dim]  + 0.5*DT*(-SUM(FS) + arr[C].S*arr[C].f_fh[dim] + BS) + (1 - arr[C].S)*arr[C].uros_md[dim];
                     arr[C].u_fh_n[dim]   = (arr[C].mn_star[dim] + arr[C].mn_prime[dim])/arr[C].ro_fh_n;
 
-                    //arr[C].uros_md[dim]  = arr[C].uro_md[dim];   TODO: Predictor is without counter!
+                    arr[C].uropr_md[dim] = arr[C].uro_md[dim];
                 }
 
                 // Pressure
@@ -264,7 +268,7 @@ void FH_corrector(FHMD *fh)
     double DT = fh->dt_FH;
     dvec   FP, QP, FS, QS, PG, TAU, TAURAN;
     matrix TAUL, TAUR;
-    double BP, BS;
+    double BP, BS, MDS;
 
     FH_char(fh);
 
@@ -300,17 +304,19 @@ void FH_corrector(FHMD *fh)
                     FS[d] = (arr[R].Sf[d]*arr[R].ufn[d][d]*(arr[R].rofn[d] - 0.5*(arr[CR].ro_prime + arr[C].ro_prime)) -
                              arr[L].Sf[d]*arr[L].ufn[d][d]*(arr[L].rofn[d] - 0.5*(arr[CL].ro_prime + arr[C].ro_prime)))/fh->grid.h[C][d];
                     // Source
-                    QS[d] = //-(arr[CR].uros_md[d] - arr[CL].uros_md[d])/(0.5*(fh->grid.h[CR][d] + 2.0*fh->grid.h[C][d] + fh->grid.h[CL][d])) -
-                            -fh->alpha*
+                    QS[d] = -fh->alpha*
                             (arr[R].Sf[d]*(1 - arr[R].Sf[d])*(arr[CR].ro_prime - arr[C].ro_prime)/(0.5*(fh->grid.h[CR][d] + fh->grid.h[C][d])) -
                              arr[L].Sf[d]*(1 - arr[L].Sf[d])*(arr[C].ro_prime - arr[CL].ro_prime)/(0.5*(fh->grid.h[CL][d] + fh->grid.h[C][d])))/fh->grid.h[C][d];
                 }
 
+                // MD Source
+                MDS = (1 - arr[C].S)*(arr[C].ro_md - arr[C].ropr_md - arr[C].ros_md);
+
                 // Mass conservation
-                arr[C].ro_star  = arr[C].ron_star  + 0.5*DT*(-SUM(FS) + SUM(QS)) + (1 - arr[C].S)*(arr[C].ro_md - arr[C].ros_md);
+                arr[C].ro_star  = arr[C].ron_star  + 0.5*DT*(-SUM(FS) + SUM(QS)) + MDS;
                 arr[C].ro_fh    = arr[C].ro_star + arr[C].ro_prime;
 
-                arr[C].ros_md   = arr[C].ro_md;
+                //arr[C].ros_md   = arr[C].ro_md;
 
                 for(int d = 0; d < DIM; d++)
                 {
@@ -346,19 +352,19 @@ void FH_corrector(FHMD *fh)
                         FS[d] = (arr[R].Sf[d]*arr[R].ufn[d][d]*(arr[R].ufn[dim][d]*arr[R].rofn[d] - 0.5*(arr[CR].m_prime[dim] + arr[C].m_prime[dim])) -
                                  arr[L].Sf[d]*arr[L].ufn[d][d]*(arr[L].ufn[dim][d]*arr[L].rofn[d] - 0.5*(arr[CL].m_prime[dim] + arr[C].m_prime[dim])))
                                  /fh->grid.h[C][d];
-
-                        QS[d] = 0; //-(arr[CR].uuros_md[dim][d] - arr[CL].uuros_md[dim][d])/(0.5*(fh->grid.h[CR][d] + 2.0*fh->grid.h[C][d] + fh->grid.h[CL][d]));
                     }
 
                     // Beta-term
                     BS =  fh->beta*arr[C].S*(1 - arr[C].S)*arr[C].m_prime[dim];
 
+                    // MD Source
+                    MDS = (1 - arr[C].S)*(arr[C].uro_md[dim] - arr[C].uropr_md[dim] - arr[C].uros_md[dim]);
+
                     // Momentum conservation
-                    arr[C].m_star[dim]  = arr[C].mn_star[dim]  + 0.5*DT*(-SUM(FS)/* + arr[C].fs_md[dim]*/ + arr[C].S*arr[C].f_fh[dim] + BS + SUM(QS)) +
-                            (1 - arr[C].S)*(arr[C].uro_md[dim] - arr[C].uros_md[dim]);
+                    arr[C].m_star[dim]  = arr[C].mn_star[dim]  + 0.5*DT*(-SUM(FS) + arr[C].S*arr[C].f_fh[dim] + BS) + MDS;
                     arr[C].u_fh[dim]    = (arr[C].m_star[dim] + arr[C].m_prime[dim])/arr[C].ro_fh;
 
-                    arr[C].uros_md[dim] = arr[C].uro_md[dim];
+                    //arr[C].uros_md[dim] = arr[C].uro_md[dim];
                 }
 
                 // Pressure

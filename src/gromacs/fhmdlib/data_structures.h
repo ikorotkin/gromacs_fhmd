@@ -34,8 +34,8 @@ typedef struct FH_arrays                    /* FH/MD arrays */
     dvec        m_prime, mn_prime;          /* m prime */
     dvec        m_star, mn_star;            /* m star */
 
-    double      ros_md;                     /* source of MD density */
-    dvec        uros_md;                    /* source of MD momentum */
+    double      ros_md, ropr_md;            /* sources of MD density */
+    dvec        uros_md, uropr_md;          /* sources of MD momentum */
 
     double      S;                          /* S parameter in the FH cell centres */
     dvec        Sf;                         /* S parameter in the FH cell faces */
