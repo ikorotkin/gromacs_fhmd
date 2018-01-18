@@ -61,7 +61,7 @@ typedef struct FH_grid          /* Computational grid */
 
 typedef struct MD_stat          /* Particle statistics */
 {
-    int         N;
+    int         N, n;
     double      invN;
 
     double     *avg_rho_md_cell, *avg_rho_fh_cell;

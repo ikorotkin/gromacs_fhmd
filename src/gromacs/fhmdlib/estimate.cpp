@@ -6,6 +6,7 @@ void fhmd_reset_statistics(FHMD *fh)
     MD_stat *st = &fh->stat;
 
     st->N            = 0;
+    st->n            = 0;
     st->invN         = 0;
 
     st->davg_rho_md  = 0;
@@ -28,11 +29,8 @@ void fhmd_collect_statistics(FHMD *fh)
     MD_stat   *st  = &fh->stat;
     FH_arrays *arr =  fh->arr;
 
-    static int n = 0;
-    double     invn;
-
-    n++;
-    invn = 1.0/(double)(n);
+    st->n++;
+    double invn = 1.0/(double)(st->n);
 
     for(int i = 0; i < fh->Ntot; i++)
     {
@@ -44,6 +42,7 @@ void fhmd_collect_statistics(FHMD *fh)
         st->davg_rho_md  += arr[i].ro_md;
         st->davg_rho_fh  += arr[i].ro_fh;
 
+        // Faster convergence but less accurate
         st->davg_rho2_md += (arr[i].ro_md - fh->total_density)*(arr[i].ro_md - fh->total_density);
         st->davg_rho2_fh += (arr[i].ro_fh - fh->FH_dens)*(arr[i].ro_fh - fh->FH_dens);
 

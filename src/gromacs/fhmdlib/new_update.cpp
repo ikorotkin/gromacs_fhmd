@@ -27,14 +27,15 @@ void fhmd_do_update_md(int start, int nrend,
     int    n, d;
 
     /* FHMD variables */
-    FH_arrays *arr = fh->arr;
-    int        ind;
-    double     invro_dt;
-    double     S = fh->S;
-    double     gamma_u, gamma_x;
-    int        nbr[8];
-    dvec       xi;
-    dvec       f_fh, u_fh, alpha_term, beta_term, grad_ro;
+    FH_arrays   *arr = fh->arr;
+    int          ind;
+    double       invro_dt;
+    double       S = fh->S;
+    double       gamma_u, gamma_x;
+    int          nbr[8];
+    dvec         xi;
+    dvec         f_fh, u_fh, alpha_term, beta_term, grad_ro;
+    const double g_eps = 1e-10;
 
     if (bNH || bPR)
     {
@@ -100,13 +101,14 @@ void fhmd_do_update_md(int start, int nrend,
                 lg = tcstat[gt].lambda;                             // Thermostat
 
                 // TODO: Local thermostat
-                if(S > 0.8) lg = 1.0;
+                //if(S > 0.1) lg = 1.0;
 
                 for (d = 0; d < DIM; d++)
                 {
-                 /* vn           = lg*v[n][d] + f[n][d]*w_dt; */
-                 /* v[n][d]      = vn; */
-                 /* xprime[n][d] = x[n][d] + vn*dt; */
+                     /* Pure MD: */
+                     /* vn           = lg*v[n][d] + f[n][d]*w_dt; */
+                     /* v[n][d]      = vn; */
+                     /* xprime[n][d] = x[n][d] + vn*dt; */
 
                     if(fh->scheme == One_Way)
                     {
@@ -116,27 +118,27 @@ void fhmd_do_update_md(int start, int nrend,
                     }
                     else if(fh->scheme == Two_Way)
                     {
-                        gamma_u = fh->gamma_u*S*S*dt*(fh->stat.std_u_md[d]*fh->stat.std_u_md[d] - fh->std_u*fh->std_u);
-                        gamma_x = fh->gamma_x*S*S*dt*(fh->stat.std_u_md[d]*fh->stat.std_u_md[d] - fh->std_u*fh->std_u);
+                        gamma_u = fh->gamma_u*S*dt*(fh->stat.std_u_md[d]*fh->stat.std_u_md[d] - fh->std_u*fh->std_u);
+                        gamma_x = fh->gamma_x*S*dt*(fh->stat.std_rho_md - fh->std_rho);
 
-                        if(fabs(gamma_u) >= 0.1)
-                            vn = lg*v[n][d]*exp(-gamma_u) + ((1 - S)*f[n][d]*invmass[n] + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*arr[ind].inv_ro)
-                                    *(1 - exp(-gamma_u))/gamma_u*dt;
-                        else
-                            vn = lg*v[n][d]*exp(-gamma_u) + ((1 - S)*f[n][d]*invmass[n] + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*arr[ind].inv_ro)
-                                    *(1 - 0.5*gamma_u)*dt;
+                        if(fabs(gamma_u) < g_eps) gamma_u = g_eps;
+                        if(fabs(gamma_x) < g_eps) gamma_x = g_eps;
+
+//                        if(fabs(gamma_u) >= 0.01)
+                        vn = lg*v[n][d]*exp(-gamma_u) + ((1 - S)*f[n][d]*invmass[n] + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*arr[ind].inv_ro)
+                                 *(1 - exp(-gamma_u))/gamma_u*dt;
+//                        else
+//                            vn = lg*v[n][d]*exp(-gamma_u) + ((1 - S)*f[n][d]*invmass[n] + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*arr[ind].inv_ro)
+//                                    *(1 - 0.5*gamma_u)*dt;
 
                         v[n][d] = vn;
-/*
-                        if(fabs(gamma_x) >= 0.1)
-                            xprime[n][d] = x[n][d] + (1 - S)*vn*(1 - exp(-gamma_x))/gamma_x*dt + (S*u_fh[d] + S*(1 - S)*grad_ro[d]*arr[ind].inv_ro)*dt;
-                        else
-                            xprime[n][d] = x[n][d] + (1 - S)*vn*(1 - 0.5*gamma_x)*dt           + (S*u_fh[d] + S*(1 - S)*grad_ro[d]*arr[ind].inv_ro)*dt;
-*/
-                        if(fabs(gamma_x) >= 0.1)
-                            xprime[n][d] = x[n][d] + ((1 - S)*vn + (S*u_fh[d] + S*(1 - S)*grad_ro[d]*arr[ind].inv_ro))*(1 - exp(-gamma_x))/gamma_x*dt;
-                        else
-                            xprime[n][d] = x[n][d] + ((1 - S)*vn + (S*u_fh[d] + S*(1 - S)*grad_ro[d]*arr[ind].inv_ro))*(1 - 0.5*gamma_x)*dt;
+
+//                        if(fabs(gamma_x) >= 0.01)
+                        xprime[n][d] = x[n][d] + (1 - S)*vn*(1 - exp(-gamma_u))/gamma_u*dt +
+                                           (S*u_fh[d] + S*(1 - S)*grad_ro[d]*arr[ind].inv_ro)*(1 - exp(-gamma_x))/gamma_x*dt;
+//                        else
+//                            xprime[n][d] = x[n][d] + (1 - S)*vn*(1 - 0.5*gamma_u)*dt +
+//                                               (S*u_fh[d] + S*(1 - S)*grad_ro[d]*arr[ind].inv_ro)*(1 - 0.5*gamma_x)*dt;
                     }
                 }
             }
