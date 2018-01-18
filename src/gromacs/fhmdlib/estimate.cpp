@@ -83,35 +83,37 @@ void fhmd_update_statistics(FHMD *fh)
 }
 
 
-void fhmd_print_statistics(FHMD *fh)
+void fhmd_print_statistics(FHMD *fh, t_commrec *cr)
 {
     MD_stat *st = &fh->stat;
 
     fhmd_collect_statistics(fh);
+    fhmd_update_statistics(fh);     // It is here for stochastic integration
 
-    if((!(fh->step_MD % (fh->FH_step))    && (fh->step_MD < (fh->FH_step*10)))  ||
-       (!(fh->step_MD % (fh->FH_step*10)) && (fh->step_MD < (fh->FH_step*100))) ||
-        !(fh->step_MD % (fh->FH_step*100)))
+    if(MASTER(cr))
     {
-        fhmd_update_statistics(fh);
-
-        if(!fh->step_MD)
+        if((!(fh->step_MD % (fh->FH_step))    && (fh->step_MD < (fh->FH_step*10)))  ||
+           (!(fh->step_MD % (fh->FH_step*10)) && (fh->step_MD < (fh->FH_step*100))) ||
+            !(fh->step_MD % (fh->FH_step*100)))
         {
-            printf("%8s " MAKE_LIGHT_BLUE "%10s " MAKE_BLUE "%10s " MAKE_LIGHT_BLUE "%9s %9s %9s " MAKE_BLUE "%9s %9s %9s " MAKE_LIGHT_BLUE "%9s %9s %9s"
-                   RESET_COLOR "\n",
-                   "Step", "STD_rho_MD", "STD_rho_FH", "STD_Ux_MD", "STD_Uy_MD", "STD_Uz_MD", "STD_Ux_FH", "STD_Uy_FH", "STD_Uz_FH",
-                   "<Ux_MD>", "<Uy_MD>", "<Uz_MD>");
-            printf("------------------------------------------------------------------------------------------------------------------------\n");
+            if(!fh->step_MD)
+            {
+                printf("%8s " MAKE_LIGHT_BLUE "%10s " MAKE_BLUE "%10s " MAKE_LIGHT_BLUE "%9s %9s %9s " MAKE_BLUE "%9s %9s %9s " MAKE_LIGHT_BLUE "%9s %9s %9s"
+                       RESET_COLOR "\n",
+                       "Step", "STD_rho_MD", "STD_rho_FH", "STD_Ux_MD", "STD_Uy_MD", "STD_Uz_MD", "STD_Ux_FH", "STD_Uy_FH", "STD_Uz_FH",
+                       "<Ux_MD>", "<Uy_MD>", "<Uz_MD>");
+                printf("------------------------------------------------------------------------------------------------------------------------\n");
+            }
+
+            printf("\r%8d " MAKE_LIGHT_BLUE "%10.4f " MAKE_BLUE "%10.4f " MAKE_LIGHT_BLUE "%9.5f %9.5f %9.5f " MAKE_BLUE "%9.5f %9.5f %9.5f "
+                   MAKE_LIGHT_BLUE "%9.2e %9.2e %9.2e",
+                   fh->step_MD, st->std_rho_md, st->std_rho_fh, st->std_u_md[0], st->std_u_md[1], st->std_u_md[2],
+                   st->std_u_fh[0], st->std_u_fh[1], st->std_u_fh[2], st->avg_u_md[0], st->avg_u_md[1], st->avg_u_md[2]);
+
+            printf(RESET_COLOR "\n");
+
+            fflush(stdout);
         }
-
-        printf("\r%8d " MAKE_LIGHT_BLUE "%10.4f " MAKE_BLUE "%10.4f " MAKE_LIGHT_BLUE "%9.5f %9.5f %9.5f " MAKE_BLUE "%9.5f %9.5f %9.5f "
-               MAKE_LIGHT_BLUE "%9.2e %9.2e %9.2e",
-               fh->step_MD, st->std_rho_md, st->std_rho_fh, st->std_u_md[0], st->std_u_md[1], st->std_u_md[2],
-               st->std_u_fh[0], st->std_u_fh[1], st->std_u_fh[2], st->avg_u_md[0], st->avg_u_md[1], st->avg_u_md[2]);
-
-        printf(RESET_COLOR "\n");
-
-        fflush(stdout);
     }
 }
 

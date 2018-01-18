@@ -98,6 +98,8 @@ typedef struct FHMD
     double      beta;           /* Beta parameter, nm^2/ps or ps^-1 depending on the scheme */
     double      gamma_x;        /* Gamma_x parameter (density fluctuations dissipator), ps^-1 */
     double      gamma_u;        /* Gamma_u parameter (velocity fluctuations dissipator), ps^-1 */
+    double      std_rho;        /* Analytical STD of density */
+    double      std_u;          /* Analytical STD of velocity */
 
     ivec        N;              /* Number of FH cells along each direction */
     dvec        box;            /* Box size */

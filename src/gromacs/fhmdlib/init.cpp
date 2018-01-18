@@ -253,16 +253,16 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
     /* Create FH grid and initialise FH solver */
 
     define_FH_grid(cr, fh);
+    if(fh->scheme == One_Way)
+        FH_init(fh, cr);
 
     if(MASTER(cr))
     {
         if(fh->scheme == One_Way)
         {
-            FH_init(fh);
             FH_equilibrate(fh);
+            printf(MAKE_GREEN "FHMD: Initialization finished. Starting MD/FH solver...\n" RESET_COLOR "\n");
         }
-
-        printf(MAKE_GREEN "FHMD: Initialization finished. Starting MD/FH solver...\n" RESET_COLOR "\n");
         fflush(stdout);
     }
 

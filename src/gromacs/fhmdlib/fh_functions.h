@@ -1,7 +1,7 @@
 #ifndef FHMD_FH_FUNCTIONS_H_
 #define FHMD_FH_FUNCTIONS_H_
 
-void FH_init(FHMD *fh);
+void FH_init(FHMD *fh, t_commrec *cr);
 void FH_predictor(FHMD *fh);
 void FH_corrector(FHMD *fh);
 void FH_char(FHMD *fh);

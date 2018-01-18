@@ -1497,11 +1497,12 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                  */
                 if(fhmd.scheme == Two_Way)
                 {
+                    if(fhmd.step_MD == 0) FH_init(&fhmd, cr);
+
                     if(MASTER(cr))
                     {
                         if(fhmd.step_MD == 0)
                         {
-                            FH_init(&fhmd);
                             FH_predictor(&fhmd);
                         }
                         else if(!(fhmd.step_MD % fhmd.FH_step))
@@ -1527,8 +1528,7 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 /*
                  * FHMD: Collect and print statistics
                  */
-                if(MASTER(cr))
-                    fhmd_print_statistics(&fhmd);
+                fhmd_print_statistics(&fhmd, cr);
 
                 /*
                  * FHMD: Modified update_coords() here

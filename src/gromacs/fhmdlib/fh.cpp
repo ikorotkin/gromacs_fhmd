@@ -4,7 +4,7 @@
 #include "sfunction.h"
 
 
-void FH_init(FHMD *fh)
+void FH_init(FHMD *fh, t_commrec *cr)
 {
     FH_arrays *arr = fh->arr;
     ivec ind;
@@ -33,12 +33,21 @@ void FH_init(FHMD *fh)
         break;
     }
 
+    fh->std_rho = sqrt(fh->FH_temp*fh->FH_dens*FHMD_kB/(fh->box_volume/(double)(fh->Ntot)))/SOUND;
+    fh->std_u   = sqrt(fh->FH_temp*FHMD_kB/(fh->FH_dens*fh->box_volume/(double)(fh->Ntot)));
+
+    if(MASTER(cr))
+    {
+        printf(MAKE_GREEN "FHMD: Analytical STD of density: %g [amu/nm^3], STD of velocity: %g [nm/ps]\n", fh->std_rho, fh->std_u);
+        printf(RESET_COLOR "\n");
+
 #ifdef FHMD_DEBUG_FH
-    printf(MAKE_YELLOW "FHMD DEBUG: MU = %g, KAPPA = %g\n", MU, KAPPA);
-    printf(MAKE_YELLOW "FHMD DEBUG: A = %g, B = %g, C = %g, D = %g, E = %g\n", EOS_A, EOS_B, EOS_C, EOS_D, EOS_E);
-    printf(MAKE_YELLOW "FHMD DEBUG: Initial Pressure = %g [MPa], Speed of Sound = %g [m/s]\n", P_INIT/6.0221367e-1, SOUND*1000.0);
-    printf(RESET_COLOR "\n");
+        printf(MAKE_YELLOW "FHMD DEBUG: MU = %g, KAPPA = %g\n", MU, KAPPA);
+        printf(MAKE_YELLOW "FHMD DEBUG: A = %g, B = %g, C = %g, D = %g, E = %g\n", EOS_A, EOS_B, EOS_C, EOS_D, EOS_E);
+        printf(MAKE_YELLOW "FHMD DEBUG: Initial Pressure = %g [MPa], Speed of Sound = %g [m/s]\n", P_INIT/6.0221367e-1, SOUND*1000.0);
+        printf(RESET_COLOR "\n");
 #endif
+    }
 
     // Viscosity terms for viscous stress
     VISC1 = 4.0/3.0 + KAPPA/MU;
@@ -156,7 +165,7 @@ void FH_init(FHMD *fh)
 
 void FH_predictor(FHMD *fh)
 {
-    FH_arrays *arr = fh->arr;
+    FH_arrays *a = fh->arr, *arr = fh->arr;
 
     ivec   ind;
     double DT = fh->dt_FH;
@@ -176,82 +185,82 @@ void FH_predictor(FHMD *fh)
 
                 for(int d = 0; d < DIM; d++)
                 {
-                    // Mass flux
-                    FP[d] = (arr[R].uf[d][d]*(arr[R].rof[d] - 0.5*(arr[CR].ro_md + arr[C].ro_md)) -
-                             arr[L].uf[d][d]*(arr[L].rof[d] - 0.5*(arr[CL].ro_md + arr[C].ro_md)))/fh->grid.h[C][d];
-                    // Source
+                    // Mass flux for rho_prime
+                    FP[d] = (a[R].uf[d][d]*(a[R].rof[d] - 0.5*(a[CR].ro_md + a[C].ro_md)) -
+                             a[L].uf[d][d]*(a[L].rof[d] - 0.5*(a[CL].ro_md + a[C].ro_md)))/HC;
+                    // Source for rho_prime
                     QP[d] = fh->alpha*
-                            (arr[R].Sf[d]*(1 - arr[R].Sf[d])*((arr[CR].ro_fh - arr[CR].ro_md) - (arr[C].ro_fh - arr[C].ro_md))
-                                    /(0.5*(fh->grid.h[CR][d] + fh->grid.h[C][d])) -
-                             arr[L].Sf[d]*(1 - arr[L].Sf[d])*((arr[C].ro_fh - arr[C].ro_md) - (arr[CL].ro_fh - arr[CL].ro_md))
-                                    /(0.5*(fh->grid.h[CL][d] + fh->grid.h[C][d])))/fh->grid.h[C][d];
-                    // Mass flux
-                    FS[d] = (arr[R].Sf[d]*arr[R].uf[d][d]*0.5*(arr[CR].ro_star + arr[C].ro_star) -
-                             arr[L].Sf[d]*arr[L].uf[d][d]*0.5*(arr[CL].ro_star + arr[C].ro_star))/fh->grid.h[C][d];
-                    // Source
+                            (SR*(1 - SR)*((a[CR].ro_fh - a[CR].ro_md) - (a[C].ro_fh - a[C].ro_md))/HR -
+                             SL*(1 - SL)*((a[C].ro_fh - a[C].ro_md) - (a[CL].ro_fh - a[CL].ro_md))/HL)/HC;
+                    // Mass flux for rho_star
+                    FS[d] = (SR*a[R].uf[d][d]*0.5*(a[CR].ro_star + a[C].ro_star) -
+                             SL*a[L].uf[d][d]*0.5*(a[CL].ro_star + a[C].ro_star))/HC;
+                    // Source for rho_star
                     QS[d] = -fh->alpha*
-                            (arr[R].Sf[d]*(1 - arr[R].Sf[d])*(arr[CR].ro_prime - arr[C].ro_prime)/(0.5*(fh->grid.h[CR][d] + fh->grid.h[C][d])) -
-                             arr[L].Sf[d]*(1 - arr[L].Sf[d])*(arr[C].ro_prime - arr[CL].ro_prime)/(0.5*(fh->grid.h[CL][d] + fh->grid.h[C][d])))/fh->grid.h[C][d];
+                            (SR*(1 - SR)*(a[CR].ro_prime - a[C].ro_prime)/HR -
+                             SL*(1 - SL)*(a[C].ro_prime - a[CL].ro_prime)/HL)/HC;
                 }
 
                 // MD source
-                arr[C].ros_md = (arr[C].ro_md - arr[C].ropr_md)*0.5;
+                a[C].ros_md = (a[C].ro_md - a[C].ropr_md)*0.5;
 
                 // Mass conservation
-                arr[C].ron_prime = arr[C].ro_prime + 0.5*DT*(-SUM(FP) + SUM(QP));
-                arr[C].ron_star  = arr[C].ro_star  + 0.5*DT*(-SUM(FS) + SUM(QS)) + (1 - arr[C].S)*arr[C].ros_md;
-                arr[C].ro_fh_n   = arr[C].ron_star + arr[C].ron_prime;
+                a[C].ron_prime = a[C].ro_prime + 0.5*DT*(-SUM(FP) + SUM(QP));
+                a[C].ron_star  = a[C].ro_star  + 0.5*DT*(-SUM(FS) + SUM(QS)) + (1 - SC)*a[C].ros_md;
+                a[C].ro_fh_n   = a[C].ron_star + a[C].ron_prime;
 
-                arr[C].ropr_md = arr[C].ro_md;
+                a[C].ropr_md = a[C].ro_md;
 
                 for(int d = 0; d < DIM; d++)
                 {
                     // Pressure gradient
-                    PG[d] = (arr[R].pf[d] - arr[L].pf[d])/fh->grid.h[C][d];
+                    PG[d] = (a[R].pf[d] - a[L].pf[d])/HC;
                 }
 
                 for(int dim = 0; dim < DIM; dim++)
                 {
                     VISCOUS_FLUX(u_fh);     // UNIFORM GRID! TODO: change to non-uniform
 
-                    // Momentum flux, sources, viscous and random stress
                     for(int d = 0; d < DIM; d++)
                     {
-                        FP[d] = (arr[R].uf[d][d]*(arr[R].rof[d]*arr[R].uf[dim][d] - 0.5*(arr[CR].uro_md[dim] + arr[C].uro_md[dim])) -
-                                 arr[L].uf[d][d]*(arr[L].rof[d]*arr[L].uf[dim][d] - 0.5*(arr[CL].uro_md[dim] + arr[C].uro_md[dim])))/fh->grid.h[C][d];
-                        FS[d] = (arr[R].Sf[d]*arr[R].uf[d][d]*0.5*(arr[CR].m_star[dim] + arr[C].m_star[dim]) -
-                                 arr[L].Sf[d]*arr[L].uf[d][d]*0.5*(arr[CL].m_star[dim] + arr[C].m_star[dim]))/fh->grid.h[C][d];
-
-                        TAU[d]    = (TAUR[dim][d] - TAUL[dim][d])/fh->grid.h[C][d];
-                        TAURAN[d] = (arr[R].rans[dim][d] - arr[L].rans[dim][d])/fh->grid.h[C][d];
+                        // Momentum flux for m_prime
+                        FP[d] = (a[R].uf[d][d]*(a[R].rof[d]*a[R].uf[dim][d] - 0.5*(a[CR].uro_md[dim] + a[C].uro_md[dim])) -
+                                 a[L].uf[d][d]*(a[L].rof[d]*a[L].uf[dim][d] - 0.5*(a[CL].uro_md[dim] + a[C].uro_md[dim])))/HC;
+                        // Momentum flux for m_star
+                        FS[d] = (SR*a[R].uf[d][d]*0.5*(a[CR].m_star[dim] + a[C].m_star[dim]) -
+                                 SL*a[L].uf[d][d]*0.5*(a[CL].m_star[dim] + a[C].m_star[dim]))/HC;
+                        // Viscous stress
+                        TAU[d]    = (TAUR[dim][d] - TAUL[dim][d])/HC;
+                        // Random stress
+                        TAURAN[d] = (a[R].rans[dim][d] - a[L].rans[dim][d])/HC;
                     }
 
                     // Beta-terms
-                    BP = -fh->beta*arr[C].S*(1 - arr[C].S)*(arr[C].ro_fh*arr[C].u_fh[dim] - arr[C].uro_md[dim]);
-                    BS =  fh->beta*arr[C].S*(1 - arr[C].S)*arr[C].m_prime[dim];
+                    BP = -fh->beta*SC*(1 - SC)*(a[C].ro_fh*a[C].u_fh[dim] - a[C].uro_md[dim]);
+                    BS =  fh->beta*SC*(1 - SC)*a[C].m_prime[dim];
 
                     // FH force
-                    arr[C].f_fh[dim] = -PG[dim] + SUM(TAU) + SUM(TAURAN);
+                    a[C].f_fh[dim] = -PG[dim] + SUM(TAU) + SUM(TAURAN);
 
                     // MD source
-                    arr[C].uros_md[dim] = (arr[C].uro_md[dim] - arr[C].uropr_md[dim])*0.5;
+                    a[C].uros_md[dim] = (a[C].uro_md[dim] - a[C].uropr_md[dim])*0.5;
 
                     // Momentum conservation
-                    arr[C].mn_prime[dim] = arr[C].m_prime[dim] + 0.5*DT*(-SUM(FP) + BP);
-                    arr[C].mn_star[dim]  = arr[C].m_star[dim]  + 0.5*DT*(-SUM(FS) + arr[C].S*arr[C].f_fh[dim] + BS) + (1 - arr[C].S)*arr[C].uros_md[dim];
-                    arr[C].u_fh_n[dim]   = (arr[C].mn_star[dim] + arr[C].mn_prime[dim])/arr[C].ro_fh_n;
+                    a[C].mn_prime[dim] = a[C].m_prime[dim] + 0.5*DT*(-SUM(FP) + BP);
+                    a[C].mn_star[dim]  = a[C].m_star[dim]  + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + (1 - SC)*a[C].uros_md[dim];
+                    a[C].u_fh_n[dim]   = (a[C].mn_star[dim] + a[C].mn_prime[dim])/a[C].ro_fh_n;
 
-                    arr[C].uropr_md[dim] = arr[C].uro_md[dim];
+                    a[C].uropr_md[dim] = a[C].uro_md[dim];
                 }
 
                 // Pressure
                 switch(fh->eos)
                 {
                 case eos_argon:
-                    arr[C].pn = EOS_D*(1./3.*EOS_A*EOS_A*pow(EOS_E*arr[C].ro_fh_n - EOS_B, 3) + EOS_C);
+                    a[C].pn = EOS_D*(1./3.*EOS_A*EOS_A*pow(EOS_E*a[C].ro_fh_n - EOS_B, 3) + EOS_C);
                     break;
                 case eos_spce:
-                    arr[C].pn = arr[C].ro_fh_n*(arr[C].ro_fh_n*EOS_A + EOS_B) + EOS_C;
+                    a[C].pn = a[C].ro_fh_n*(a[C].ro_fh_n*EOS_A + EOS_B) + EOS_C;
                     break;
                 }
             }
@@ -262,7 +271,7 @@ void FH_predictor(FHMD *fh)
 
 void FH_corrector(FHMD *fh)
 {
-    FH_arrays *arr = fh->arr;
+    FH_arrays *a = fh->arr, *arr = fh->arr;
 
     ivec   ind;
     double DT = fh->dt_FH;
@@ -282,109 +291,119 @@ void FH_corrector(FHMD *fh)
 
                 for(int d = 0; d < DIM; d++)
                 {
-                    // Mass flux
-                    FP[d] = (arr[R].ufn[d][d]*(arr[R].rofn[d] - 0.5*(arr[CR].ro_md + arr[C].ro_md)) -
-                             arr[L].ufn[d][d]*(arr[L].rofn[d] - 0.5*(arr[CL].ro_md + arr[C].ro_md)))/fh->grid.h[C][d];
-                    // Source
+                    // Mass flux for rho_prime
+                    FP[d] = (a[R].ufn[d][d]*(a[R].rofn[d] - 0.5*(a[CR].ro_md + a[C].ro_md)) -
+                             a[L].ufn[d][d]*(a[L].rofn[d] - 0.5*(a[CL].ro_md + a[C].ro_md)))/HC;
+                    // Source for rho_prime
                     QP[d] = fh->alpha*
-                            (arr[R].Sf[d]*(1 - arr[R].Sf[d])*
-                                    ((0.5*(arr[RR].rofn[d] + arr[R].rofn[d]) - arr[CR].ro_md) - (0.5*(arr[R].rofn[d] + arr[L].rofn[d]) - arr[C].ro_md))
-                                            /(0.5*(fh->grid.h[CR][d] + fh->grid.h[C][d])) -
-                             arr[L].Sf[d]*(1 - arr[L].Sf[d])*
-                                    ((0.5*(arr[R].rofn[d] + arr[L].rofn[d]) - arr[C].ro_md) - (0.5*(arr[LL].rofn[d] + arr[L].rofn[d]) - arr[CL].ro_md))
-                                            /(0.5*(fh->grid.h[CL][d] + fh->grid.h[C][d])))/fh->grid.h[C][d];
+                            (SR*(1 - SR)*((0.5*(a[RR].rofn[d] + a[R].rofn[d]) - a[CR].ro_md) - (0.5*(a[R].rofn[d] + a[L].rofn[d]) - a[C].ro_md))/HR -
+                             SL*(1 - SL)*((0.5*(a[R].rofn[d] + a[L].rofn[d]) - a[C].ro_md) - (0.5*(a[LL].rofn[d] + a[L].rofn[d]) - a[CL].ro_md))/HL)/HC;
                 }
 
                 // Mass conservation
-                arr[C].ro_prime = arr[C].ron_prime + 0.5*DT*(-SUM(FP) + SUM(QP));
+                a[C].ro_prime = a[C].ron_prime + 0.5*DT*(-SUM(FP) + SUM(QP));
+
+                for(int dim = 0; dim < DIM; dim++)
+                {
+                    for(int d = 0; d < DIM; d++)
+                    {
+                        // Momentum flux for m_prime
+                        FP[d] = (a[R].ufn[d][d]*(a[R].rofn[d]*a[R].ufn[dim][d] - 0.5*(a[CR].uro_md[dim] + a[C].uro_md[dim])) -
+                                 a[L].ufn[d][d]*(a[L].rofn[d]*a[L].ufn[dim][d] - 0.5*(a[CL].uro_md[dim] + a[C].uro_md[dim])))/HC;
+                        // Source for m_prime
+                        QP[d] = -fh->beta*SC*(1 - SC)*(0.5*(a[L].rofn[d]*a[L].ufn[d][d] + a[R].rofn[d]*a[R].ufn[d][d]) - a[C].uro_md[d]);
+                    }
+
+                    // Momentum conservation
+                    a[C].m_prime[dim] = a[C].mn_prime[dim] + 0.5*DT*(-SUM(FP) + QP[dim]);
+                }
+            }
+        }
+    }
+
+    for(int k = 0; k < NZ; k++)
+    {
+        for(int j = 0; j < NY; j++)
+        {
+            for(int i = 0; i < NX; i++)
+            {
+                ASSIGN_IND(ind, i, j, k);
 
                 for(int d = 0; d < DIM; d++)
                 {
-                    // Mass flux
-                    FS[d] = (arr[R].Sf[d]*arr[R].ufn[d][d]*(arr[R].rofn[d] - 0.5*(arr[CR].ro_prime + arr[C].ro_prime)) -
-                             arr[L].Sf[d]*arr[L].ufn[d][d]*(arr[L].rofn[d] - 0.5*(arr[CL].ro_prime + arr[C].ro_prime)))/fh->grid.h[C][d];
-                    // Source
+                    // Mass flux for rho_star
+                    FS[d] = (SR*a[R].ufn[d][d]*(a[R].rofn[d] - 0.5*(a[CR].ro_prime + a[C].ro_prime)) -
+                             SL*a[L].ufn[d][d]*(a[L].rofn[d] - 0.5*(a[CL].ro_prime + a[C].ro_prime)))/HC;
+                    // Source for rho_star
                     QS[d] = -fh->alpha*
-                            (arr[R].Sf[d]*(1 - arr[R].Sf[d])*(arr[CR].ro_prime - arr[C].ro_prime)/(0.5*(fh->grid.h[CR][d] + fh->grid.h[C][d])) -
-                             arr[L].Sf[d]*(1 - arr[L].Sf[d])*(arr[C].ro_prime - arr[CL].ro_prime)/(0.5*(fh->grid.h[CL][d] + fh->grid.h[C][d])))/fh->grid.h[C][d];
+                            (SR*(1 - SR)*(a[CR].ro_prime - a[C].ro_prime)/HR -
+                             SL*(1 - SL)*(a[C].ro_prime - a[CL].ro_prime)/HL)/HC;
                 }
 
                 // MD Source
-                MDS = (1 - arr[C].S)*(arr[C].ro_md - arr[C].ropr_md - arr[C].ros_md);
+                MDS = (1 - SC)*(a[C].ro_md - a[C].ropr_md - a[C].ros_md);
 
                 // Mass conservation
-                arr[C].ro_star  = arr[C].ron_star  + 0.5*DT*(-SUM(FS) + SUM(QS)) + MDS;
-                arr[C].ro_fh    = arr[C].ro_star + arr[C].ro_prime;
-
-                //arr[C].ros_md   = arr[C].ro_md;
+                a[C].ro_star  = a[C].ron_star  + 0.5*DT*(-SUM(FS) + SUM(QS)) + MDS;
+                a[C].ro_fh    = a[C].ro_star + a[C].ro_prime;
 
                 for(int d = 0; d < DIM; d++)
                 {
                     // Pressure gradient
-                    PG[d] = (arr[R].pfn[d] - arr[L].pfn[d])/fh->grid.h[C][d];
+                    PG[d] = (a[R].pfn[d] - a[L].pfn[d])/HC;
                 }
 
                 for(int dim = 0; dim < DIM; dim++)
                 {
                     VISCOUS_FLUX(u_fh_n);     // UNIFORM GRID! TODO: change to non-uniform
 
-                    // Momentum flux, source, viscous and random stress
                     for(int d = 0; d < DIM; d++)
                     {
-                        FP[d] = (arr[R].ufn[d][d]*(arr[R].rofn[d]*arr[R].ufn[dim][d] - 0.5*(arr[CR].uro_md[dim] + arr[C].uro_md[dim])) -
-                                 arr[L].ufn[d][d]*(arr[L].rofn[d]*arr[L].ufn[dim][d] - 0.5*(arr[CL].uro_md[dim] + arr[C].uro_md[dim])))/fh->grid.h[C][d];
-
-                        QP[d] = -fh->beta*arr[C].S*(1 - arr[C].S)*(0.5*(arr[L].rofn[d]*arr[L].ufn[d][d] + arr[R].rofn[d]*arr[R].ufn[d][d]) - arr[C].uro_md[d]);
-
-                        TAU[d]    = (TAUR[dim][d] - TAUL[dim][d])/fh->grid.h[C][d];
-                        TAURAN[d] = (arr[R].rans[dim][d] - arr[L].rans[dim][d])/fh->grid.h[C][d];
+                        // Viscous stress
+                        TAU[d]    = (TAUR[dim][d] - TAUL[dim][d])/HC;
+                        // Random stress
+                        TAURAN[d] = (a[R].rans[dim][d] - a[L].rans[dim][d])/HC;
                     }
 
                     // FH force
-                    arr[C].f_fh[dim] = -PG[dim] + SUM(TAU) + SUM(TAURAN);
+                    a[C].f_fh[dim] = -PG[dim] + SUM(TAU) + SUM(TAURAN);
 
-                    // Momentum conservation
-                    arr[C].m_prime[dim] = arr[C].mn_prime[dim] + 0.5*DT*(-SUM(FP) + QP[dim]);
-
-                    // Momentum flux, source
                     for(int d = 0; d < DIM; d++)
                     {
-                        FS[d] = (arr[R].Sf[d]*arr[R].ufn[d][d]*(arr[R].ufn[dim][d]*arr[R].rofn[d] - 0.5*(arr[CR].m_prime[dim] + arr[C].m_prime[dim])) -
-                                 arr[L].Sf[d]*arr[L].ufn[d][d]*(arr[L].ufn[dim][d]*arr[L].rofn[d] - 0.5*(arr[CL].m_prime[dim] + arr[C].m_prime[dim])))
-                                 /fh->grid.h[C][d];
+                        // Momentum flux for m_star
+                        FS[d] = (SR*a[R].ufn[d][d]*(a[R].ufn[dim][d]*a[R].rofn[d] - 0.5*(a[CR].m_prime[dim] + a[C].m_prime[dim])) -
+                                 SL*a[L].ufn[d][d]*(a[L].ufn[dim][d]*a[L].rofn[d] - 0.5*(a[CL].m_prime[dim] + a[C].m_prime[dim])))/HC;
                     }
 
                     // Beta-term
-                    BS =  fh->beta*arr[C].S*(1 - arr[C].S)*arr[C].m_prime[dim];
+                    BS = fh->beta*SC*(1 - SC)*a[C].m_prime[dim];
 
                     // MD Source
-                    MDS = (1 - arr[C].S)*(arr[C].uro_md[dim] - arr[C].uropr_md[dim] - arr[C].uros_md[dim]);
+                    MDS = (1 - SC)*(a[C].uro_md[dim] - a[C].uropr_md[dim] - a[C].uros_md[dim]);
 
                     // Momentum conservation
-                    arr[C].m_star[dim]  = arr[C].mn_star[dim]  + 0.5*DT*(-SUM(FS) + arr[C].S*arr[C].f_fh[dim] + BS) + MDS;
-                    arr[C].u_fh[dim]    = (arr[C].m_star[dim] + arr[C].m_prime[dim])/arr[C].ro_fh;
-
-                    //arr[C].uros_md[dim] = arr[C].uro_md[dim];
+                    a[C].m_star[dim] = a[C].mn_star[dim] + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + MDS;
+                    a[C].u_fh[dim]   = (a[C].m_star[dim] + a[C].m_prime[dim])/a[C].ro_fh;
                 }
 
                 // Pressure
                 switch(fh->eos)
                 {
                 case eos_argon:
-                    arr[C].p = EOS_D*(1./3.*EOS_A*EOS_A*pow(EOS_E*arr[C].ro_fh - EOS_B, 3) + EOS_C);
+                    a[C].p = EOS_D*(1./3.*EOS_A*EOS_A*pow(EOS_E*a[C].ro_fh - EOS_B, 3) + EOS_C);
                     break;
                 case eos_spce:
-                    arr[C].p = arr[C].ro_fh*(arr[C].ro_fh*EOS_A + EOS_B) + EOS_C;
+                    a[C].p = a[C].ro_fh*(a[C].ro_fh*EOS_A + EOS_B) + EOS_C;
                     break;
                 }
-
-                swap_var(fh);
-
-                T += fh->dt_FH;
-                STEP++;
             }
         }
     }
+
+    swap_var(fh);
+
+    T += fh->dt_FH;
+    STEP++;
 }
 
 
@@ -408,7 +427,7 @@ void FH_predictor_1way(FHMD *fh)
                 for(int d = 0; d < DIM; d++)
                 {
                     // Mass flux
-                    F[d] = (arr[R].rof[d]*arr[R].uf[d][d] - arr[L].rof[d]*arr[L].uf[d][d])/fh->grid.h[C][d];
+                    F[d] = (arr[R].rof[d]*arr[R].uf[d][d] - arr[L].rof[d]*arr[L].uf[d][d])/HC;
                 }
 
                 // Mass conservation
@@ -417,7 +436,7 @@ void FH_predictor_1way(FHMD *fh)
                 for(int d = 0; d < DIM; d++)
                 {
                     // Pressure gradient
-                    PG[d] = (arr[R].pf[d] - arr[L].pf[d])/fh->grid.h[C][d];
+                    PG[d] = (arr[R].pf[d] - arr[L].pf[d])/HC;
                 }
 
                 for(int dim = 0; dim < DIM; dim++)
@@ -427,9 +446,9 @@ void FH_predictor_1way(FHMD *fh)
                     // Momentum flux, viscous and random stress
                     for(int d = 0; d < DIM; d++)
                     {
-                        F[d]      = (arr[R].rof[d]*arr[R].uf[d][d]*arr[R].uf[dim][d] - arr[L].rof[d]*arr[L].uf[d][d]*arr[L].uf[dim][d])/fh->grid.h[C][d];
-                        TAU[d]    = (TAUR[dim][d] - TAUL[dim][d])/fh->grid.h[C][d];
-                        TAURAN[d] = (arr[R].rans[dim][d] - arr[L].rans[dim][d])/fh->grid.h[C][d];
+                        F[d]      = (arr[R].rof[d]*arr[R].uf[d][d]*arr[R].uf[dim][d] - arr[L].rof[d]*arr[L].uf[d][d]*arr[L].uf[dim][d])/HC;
+                        TAU[d]    = (TAUR[dim][d] - TAUL[dim][d])/HC;
+                        TAURAN[d] = (arr[R].rans[dim][d] - arr[L].rans[dim][d])/HC;
                     }
 
                     // FH force
@@ -475,7 +494,7 @@ void FH_corrector_1way(FHMD *fh)
                 for(int d = 0; d < DIM; d++)
                 {
                     // Mass flux
-                    F[d] = (arr[R].rofn[d]*arr[R].ufn[d][d] - arr[L].rofn[d]*arr[L].ufn[d][d])/fh->grid.h[C][d];
+                    F[d] = (arr[R].rofn[d]*arr[R].ufn[d][d] - arr[L].rofn[d]*arr[L].ufn[d][d])/HC;
                 }
 
                 // Mass conservation
@@ -484,7 +503,7 @@ void FH_corrector_1way(FHMD *fh)
                 for(int d = 0; d < DIM; d++)
                 {
                     // Pressure gradient
-                    PG[d] = (arr[R].pfn[d] - arr[L].pfn[d])/fh->grid.h[C][d];
+                    PG[d] = (arr[R].pfn[d] - arr[L].pfn[d])/HC;
                 }
 
                 for(int dim = 0; dim < DIM; dim++)
@@ -494,9 +513,9 @@ void FH_corrector_1way(FHMD *fh)
                     // Momentum flux, viscous and random stress
                     for(int d = 0; d < DIM; d++)
                     {
-                        F[d]      = (arr[R].rofn[d]*arr[R].ufn[d][d]*arr[R].ufn[dim][d] - arr[L].rofn[d]*arr[L].ufn[d][d]*arr[L].ufn[dim][d])/fh->grid.h[C][d];
-                        TAU[d]    = (TAUR[dim][d] - TAUL[dim][d])/fh->grid.h[C][d];
-                        TAURAN[d] = (arr[R].rans[dim][d] - arr[L].rans[dim][d])/fh->grid.h[C][d];
+                        F[d]      = (arr[R].rofn[d]*arr[R].ufn[d][d]*arr[R].ufn[dim][d] - arr[L].rofn[d]*arr[L].ufn[d][d]*arr[L].ufn[dim][d])/HC;
+                        TAU[d]    = (TAUR[dim][d] - TAUL[dim][d])/HC;
+                        TAURAN[d] = (arr[R].rans[dim][d] - arr[L].rans[dim][d])/HC;
                     }
 
                     // FH force
@@ -638,10 +657,10 @@ void FH_char(FHMD *fh)
                     VPNR = 2.0*VCRN - VPR;
                     WPNR = 2.0*WCRN - WPR;
 
-                    QQ1 = 2.0*(RCLN - RCL) + DT*L1L*(RPL - RL)/fh->grid.h[C][d];
-                    QQ2 = 2.0*(QCLN - QCL) + DT*L2L*(QPL - QL)/fh->grid.h[C][d];
-                    QQ3 = 2.0*(VCLN - VCL) + DT*L3L*(VPL - VL)/fh->grid.h[C][d];
-                    QQ4 = 2.0*(WCLN - WCL) + DT*L3L*(WPL - WL)/fh->grid.h[C][d];
+                    QQ1 = 2.0*(RCLN - RCL) + DT*L1L*(RPL - RL)/HC;
+                    QQ2 = 2.0*(QCLN - QCL) + DT*L2L*(QPL - QL)/HC;
+                    QQ3 = 2.0*(VCLN - VCL) + DT*L3L*(VPL - VL)/HC;
+                    QQ4 = 2.0*(WCLN - WCL) + DT*L3L*(WPL - WL)/HC;
 
                     RMAX = DMAX3(RL,RCLN,RPL) + QQ1;    RMIN = DMIN3(RL,RCLN,RPL) + QQ1;
                     QMAX = DMAX3(QL,QCLN,QPL) + QQ2;    QMIN = DMIN3(QL,QCLN,QPL) + QQ2;
@@ -657,10 +676,10 @@ void FH_char(FHMD *fh)
                     if(WPNL > WMAX) WPNL = WMAX;
                     if(WPNL < WMIN) WPNL = WMIN;
 
-                    QQ1 = 2.0*(RCRN - RCR) + DT*L1R*(Rr - RPR)/fh->grid.h[C][d];
-                    QQ2 = 2.0*(QCRN - QCR) + DT*L2R*(QR - QPR)/fh->grid.h[C][d];
-                    QQ3 = 2.0*(VCRN - VCR) + DT*L3R*(VR - VPR)/fh->grid.h[C][d];
-                    QQ4 = 2.0*(WCRN - WCR) + DT*L3R*(WR - WPR)/fh->grid.h[C][d];
+                    QQ1 = 2.0*(RCRN - RCR) + DT*L1R*(Rr - RPR)/HC;
+                    QQ2 = 2.0*(QCRN - QCR) + DT*L2R*(QR - QPR)/HC;
+                    QQ3 = 2.0*(VCRN - VCR) + DT*L3R*(VR - VPR)/HC;
+                    QQ4 = 2.0*(WCRN - WCR) + DT*L3R*(WR - WPR)/HC;
 
                     RMAX = DMAX3(Rr,RCRN,RPR) + QQ1;    RMIN = DMIN3(Rr,RCRN,RPR) + QQ1;
                     QMAX = DMAX3(QR,QCRN,QPR) + QQ2;    QMIN = DMIN3(QR,QCRN,QPR) + QQ2;
@@ -699,10 +718,10 @@ void FH_char(FHMD *fh)
                     VPN2 = 0.5*(VPNL + VPNR);
                     WPN2 = 0.5*(WPNL + WPNR);
 
-                    QQ1 = 0.5*(2.0*(RCRN-RCR+RCLN-RCL) + DT*0.5*(L1L+L1R)*(Rr-RPR+RPL-RL)/fh->grid.h[C][d]);
-                    QQ2 = 0.5*(2.0*(QCRN-QCR+QCLN-QCL) + DT*0.5*(L2L+L2R)*(QR-QPR+QPL-QL)/fh->grid.h[C][d]);
-                    QQ3 = 0.5*(2.0*(VCRN-VCR+VCLN-VCL) + DT*0.5*(L3L+L3R)*(VR-VPR+VPL-VL)/fh->grid.h[C][d]);
-                    QQ4 = 0.5*(2.0*(WCRN-WCR+WCLN-WCL) + DT*0.5*(L3L+L3R)*(WR-WPR+WPL-WL)/fh->grid.h[C][d]);
+                    QQ1 = 0.5*(2.0*(RCRN-RCR+RCLN-RCL) + DT*0.5*(L1L+L1R)*(Rr-RPR+RPL-RL)/HC);
+                    QQ2 = 0.5*(2.0*(QCRN-QCR+QCLN-QCL) + DT*0.5*(L2L+L2R)*(QR-QPR+QPL-QL)/HC);
+                    QQ3 = 0.5*(2.0*(VCRN-VCR+VCLN-VCL) + DT*0.5*(L3L+L3R)*(VR-VPR+VPL-VL)/HC);
+                    QQ4 = 0.5*(2.0*(WCRN-WCR+WCLN-WCL) + DT*0.5*(L3L+L3R)*(WR-WPR+WPL-WL)/HC);
 
                     RMAX = DMAX3(0.5*(RL+Rr), 0.5*(RCLN+RCRN), 0.5*(RPL+RPR)) + QQ1;
                     RMIN = DMIN3(0.5*(RL+Rr), 0.5*(RCLN+RCRN), 0.5*(RPL+RPR)) + QQ1;
@@ -892,16 +911,14 @@ void FH_do_single_timestep(FHMD *fh)
 
 void FH_equilibrate(FHMD *fh)
 {
-    const double STD_RHO  = sqrt(fh->FH_temp*fh->FH_dens*FHMD_kB/(fh->box_volume/(double)(fh->Ntot)))/SOUND;
-    const double STD_U    = sqrt(fh->FH_temp*FHMD_kB/(fh->FH_dens*fh->box_volume/(double)(fh->Ntot)));
-    const int    N_OUTPUT = 1000;
+    const int N_OUTPUT = 1000;
 
     printf(MAKE_BLUE "FHMD: FH equilibration in process...\n\n");
     printf("%8s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %6s\n",
            "Step", "STD rho", "STD Ux", "STD Uy", "STD Uz", "C_s, m/s", "T, K", "<T>, K", "<rho>", "<P>", "<Ux>", "<Uy>", "<Uz>", "blend");
     printf("---------------------------------------------------------------------------------------------------------------------------------------\n");
     printf(MAKE_LIGHT_BLUE "->       %9.4f %9.5f %9.5f %9.5f %9.2f %9.4f %9.4f %9.4f %9.4f      <- Theoretical Values",
-           STD_RHO, STD_U, STD_U, STD_U, SOUND*1000.0, fh->FH_temp, fh->FH_temp, fh->FH_dens, P_INIT/6.0221367e-1);
+            fh->std_rho, fh->std_u, fh->std_u, fh->std_u, SOUND*1000.0, fh->FH_temp, fh->FH_temp, fh->FH_dens, P_INIT/6.0221367e-1);
     printf(MAKE_BLUE "\n");
 
     while(STEP <= fh->FH_equil)
