@@ -31,12 +31,16 @@ int parse_prm(char const *fname, FHMD *fh)
             ok = assign_double_value(&fh->Smax, line, fprm);
         else if(!strcmp(line, "alpha"))
             ok = assign_double_value(&fh->alpha, line, fprm);
+        else if(!strcmp(line, "beta"))
+            ok = assign_double_value(&fh->beta, line, fprm);
         else if(!strcmp(line, "gamma_x"))
             ok = assign_double_value(&fh->gamma_x, line, fprm);
         else if(!strcmp(line, "gamma_u"))
             ok = assign_double_value(&fh->gamma_u, line, fprm);
-        else if(!strcmp(line, "beta"))
-            ok = assign_double_value(&fh->beta, line, fprm);
+        else if(!strcmp(line, "eps_rho"))
+            ok = assign_double_value(&fh->eps_rho, line, fprm);
+        else if(!strcmp(line, "eps_mom"))
+            ok = assign_double_value(&fh->eps_mom, line, fprm);
         else if(!strcmp(line, "Nx"))
             ok = assign_int_value(&fh->N[0], line, fprm);
         else if(!strcmp(line, "Ny"))

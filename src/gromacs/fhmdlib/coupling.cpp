@@ -123,9 +123,12 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
         }
         else if(fh->scheme == Two_Way)
         {
-            arr[i].delta_ro = arr[i].ron_prime;
+//            arr[i].delta_ro = arr[i].ron_prime;
+//            for(int d = 0; d < DIM; d++)
+//                arr[i].beta_term[d] = fh->beta*arr[i].mn_prime[d];
+            arr[i].delta_ro = arr[i].ro_fh - arr[i].ro_md;                                          // Should be layer n+1/2?
             for(int d = 0; d < DIM; d++)
-                arr[i].beta_term[d] = fh->beta*arr[i].mn_prime[d];
+                arr[i].beta_term[d] = fh->beta*(arr[i].u_fh[d]*arr[i].ro_fh - arr[i].uro_md[d]);    // Should be layer n+1/2?
         }
     }
 

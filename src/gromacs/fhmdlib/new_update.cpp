@@ -101,7 +101,7 @@ void fhmd_do_update_md(int start, int nrend,
                 lg = tcstat[gt].lambda;                             // Thermostat
 
                 // TODO: Local thermostat
-                //if(S > 0.1) lg = 1.0;
+                if(S > 0.8) lg = 1.0;
 
                 for (d = 0; d < DIM; d++)
                 {
@@ -112,33 +112,25 @@ void fhmd_do_update_md(int start, int nrend,
 
                     if(fh->scheme == One_Way)
                     {
-                        vn           = lg*v[n][d]*gamma_u + (1 - S)*f[n][d]*w_dt + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*invro_dt;
+                        vn           = lg*v[n][d] + (1 - S)*f[n][d]*w_dt + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*invro_dt;
                         v[n][d]      = vn;
-                        xprime[n][d] = x[n][d] + gamma_x*(((1 - S)*vn + S*u_fh[d])*dt + S*(1 - S)*grad_ro[d]*invro_dt);
+                        xprime[n][d] = x[n][d] + ((1 - S)*vn + S*u_fh[d])*dt + S*(1 - S)*grad_ro[d]*invro_dt;
                     }
                     else if(fh->scheme == Two_Way)
                     {
-                        gamma_u = fh->gamma_u*S*dt*(fh->stat.std_u_md[d]*fh->stat.std_u_md[d] - fh->std_u*fh->std_u);
-                        gamma_x = fh->gamma_x*S*dt*(fh->stat.std_rho_md - fh->std_rho);
+                        gamma_u = fh->gamma_u*S*S*dt*(fh->stat.std_u_md[d]*fh->stat.std_u_md[d]/(fh->std_u*fh->std_u) - 1);
+                        gamma_x = fh->gamma_x*S*S*dt*(fh->stat.std_rho_md/fh->std_rho - 1);
 
                         if(fabs(gamma_u) < g_eps) gamma_u = g_eps;
                         if(fabs(gamma_x) < g_eps) gamma_x = g_eps;
 
-//                        if(fabs(gamma_u) >= 0.01)
                         vn = lg*v[n][d]*exp(-gamma_u) + ((1 - S)*f[n][d]*invmass[n] + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*arr[ind].inv_ro)
                                  *(1 - exp(-gamma_u))/gamma_u*dt;
-//                        else
-//                            vn = lg*v[n][d]*exp(-gamma_u) + ((1 - S)*f[n][d]*invmass[n] + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*arr[ind].inv_ro)
-//                                    *(1 - 0.5*gamma_u)*dt;
 
                         v[n][d] = vn;
 
-//                        if(fabs(gamma_x) >= 0.01)
                         xprime[n][d] = x[n][d] + (1 - S)*vn*(1 - exp(-gamma_u))/gamma_u*dt +
                                            (S*u_fh[d] + S*(1 - S)*grad_ro[d]*arr[ind].inv_ro)*(1 - exp(-gamma_x))/gamma_x*dt;
-//                        else
-//                            xprime[n][d] = x[n][d] + (1 - S)*vn*(1 - 0.5*gamma_u)*dt +
-//                                               (S*u_fh[d] + S*(1 - S)*grad_ro[d]*arr[ind].inv_ro)*(1 - 0.5*gamma_x)*dt;
                     }
                 }
             }

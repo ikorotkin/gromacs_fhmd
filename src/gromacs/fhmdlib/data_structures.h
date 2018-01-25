@@ -29,10 +29,10 @@ typedef struct FH_arrays                    /* FH/MD arrays */
     dvec        grad_ro;                    /* grad of density */
     matrix      alpha_u_grad;               /* preliminary alpha-term [u-index][grad-index] */
 
-    double      ro_prime, ron_prime;        /* density prime */
-    double      ro_star, ron_star;          /* density star */
-    dvec        m_prime, mn_prime;          /* m prime */
-    dvec        m_star, mn_star;            /* m star */
+    double      ro_prime, ron_prime, ronn_prime;    /* density prime */
+    double      ro_star, ron_star;                  /* density star */
+    dvec        m_prime, mn_prime, mnn_prime;       /* m prime */
+    dvec        m_star, mn_star;                    /* m star */
 
     double      ros_md, ropr_md;            /* sources of MD density */
     dvec        uros_md, uropr_md;          /* sources of MD momentum */
@@ -98,6 +98,8 @@ typedef struct FHMD
     double      beta;           /* Beta parameter, nm^2/ps or ps^-1 depending on the scheme */
     double      gamma_x;        /* Gamma_x parameter (density fluctuations dissipator), ps^-1 */
     double      gamma_u;        /* Gamma_u parameter (velocity fluctuations dissipator), ps^-1 */
+    double      eps_rho;        /* Eps_rho parameter for ro_prime FH equation (dissipator factor, 0 <= eps_rho <= 1) */
+    double      eps_mom;        /* Eps_mom parameter for m_prime FH equation (dissipator factor, 0 <= eps_mom <= 1) */
     double      std_rho;        /* Analytical STD of density */
     double      std_u;          /* Analytical STD of velocity */
 

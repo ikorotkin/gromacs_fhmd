@@ -34,6 +34,8 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
         fh->beta        = 100;
         fh->gamma_x     = 0;
         fh->gamma_u     = 0;
+        fh->eps_rho     = 0;
+        fh->eps_mom     = 0;
         fh->N[0]        = 5;
         fh->N[1]        = 5;
         fh->N[2]        = 5;
@@ -102,11 +104,18 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
         }
 
         printf(MAKE_GREEN "FHMD: alpha = %g [nm^2/ps], beta = %g [ps^-1]\n", fh->alpha, fh->beta);
-        printf("FHMD: gamma_x = %g [ps^-1], gamma_u = %g [ps^-1]\n", fh->gamma_x, fh->gamma_u);
         fprintf(fw, "alpha   = %g           ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps\n", fh->alpha);
         fprintf(fw, "beta    = %g           ; Beta parameter for du/dt equation, ps^-1\n", fh->beta);
-        fprintf(fw, "gamma_x = %g             ; Gamma_x parameter (density fluctuations dissipator), ps^-1\n", fh->gamma_x);
-        fprintf(fw, "gamma_u = %g             ; Gamma_u parameter (velocity fluctuations dissipator), ps^-1\n\n", fh->gamma_u);
+
+        if(fh->scheme == Two_Way)
+        {
+            printf("FHMD: MD dissipator: gamma_x = %g [ps^-1], gamma_u = %g [ps^-1]\n", fh->gamma_x, fh->gamma_u);
+            printf("FHMD: FH dissipator: eps_rho = %g [--], eps_mom = %g [--]\n", fh->eps_rho, fh->eps_mom);
+            fprintf(fw, "gamma_x = %g             ; Gamma_x parameter (MD density fluctuations dissipator), ps^-1\n", fh->gamma_x);
+            fprintf(fw, "gamma_u = %g             ; Gamma_u parameter (MD velocity fluctuations dissipator), ps^-1\n", fh->gamma_u);
+            fprintf(fw, "eps_rho = %g             ; Eps_rho parameter (FH density fluctuations dissipator)\n", fh->eps_rho);
+            fprintf(fw, "eps_mom = %g             ; Eps_mom parameter (FH momentum fluctuations dissipator)\n\n", fh->eps_mom);
+        }
 
         for(int d = 0; d < DIM; d++)
         {
