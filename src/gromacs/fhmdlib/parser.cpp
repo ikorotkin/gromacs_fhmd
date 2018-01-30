@@ -41,6 +41,8 @@ int parse_prm(char const *fname, FHMD *fh)
             ok = assign_double_value(&fh->eps_rho, line, fprm);
         else if(!strcmp(line, "eps_mom"))
             ok = assign_double_value(&fh->eps_mom, line, fprm);
+        else if(!strcmp(line, "S_berendsen") || !strcmp(line, "s_berendsen"))
+            ok = assign_double_value(&fh->S_berendsen, line, fprm);
         else if(!strcmp(line, "Nx"))
             ok = assign_int_value(&fh->N[0], line, fprm);
         else if(!strcmp(line, "Ny"))

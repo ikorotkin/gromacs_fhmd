@@ -100,6 +100,7 @@ typedef struct FHMD
     double      gamma_u;        /* Gamma_u parameter (velocity fluctuations dissipator), ps^-1 */
     double      eps_rho;        /* Eps_rho parameter for ro_prime FH equation (dissipator factor, 0 <= eps_rho <= 1) */
     double      eps_mom;        /* Eps_mom parameter for m_prime FH equation (dissipator factor, 0 <= eps_mom <= 1) */
+    double      S_berendsen;    /* If S_berendsen >= 0, Berendsen thermostat works for S <= S_berendsen, otherwise factor (1-S^(-S_berendsen)) is applied */
     double      std_rho;        /* Analytical STD of density */
     double      std_u;          /* Analytical STD of velocity */
 

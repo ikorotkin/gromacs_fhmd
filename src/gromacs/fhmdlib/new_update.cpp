@@ -100,8 +100,15 @@ void fhmd_do_update_md(int start, int nrend,
                 }
                 lg = tcstat[gt].lambda;                             // Thermostat
 
-                // TODO: Local thermostat
-                if(S > 0.8) lg = 1.0;
+                /* Local thermostat */
+                if(fh->S_berendsen >= 0)
+                {
+                    if(S > fh->S_berendsen) lg = 1;
+                }
+                else
+                {
+                    lg = lg*(1 - pow(S, -fh->S_berendsen)) + pow(S, -fh->S_berendsen);
+                }
 
                 for (d = 0; d < DIM; d++)
                 {

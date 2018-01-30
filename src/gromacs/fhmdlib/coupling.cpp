@@ -8,7 +8,7 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms
     FH_arrays *arr = fh->arr;
     dvec       xn;
     int        ind;
-    double     S = fh->S;
+    //double     S = fh->S;
 
     FH_S(fh);       // Estimate S in the cells and cell faces
 
@@ -44,15 +44,15 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms
         fh->ind[n] = ind;
 
         arr[ind].ro_md += mass[n];
-
+/*
         if(fh->S < -1)
             S = fhmd_Sxyz_r(x[n], fh->protein_com, fh);     // MD/FH sphere follows protein
         else if(fh->S < 0)
             S = fhmd_Sxyz_r(x[n], fh->box05, fh);           // Fixed MD/FH sphere
-
+*/
         for(int d = 0; d < DIM; d++)
         {
-            arr[ind].uro_md[d]  += v[n][d]*mass[n];
+            arr[ind].uro_md[d] += v[n][d]*mass[n];
         }
     }
 
@@ -63,7 +63,7 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms
 
         for(int d = 0; d < DIM; d++)
         {
-            arr[i].uro_md[d]  *= fh->grid.ivol[i];
+            arr[i].uro_md[d] *= fh->grid.ivol[i];
         }
     }
 }

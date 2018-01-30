@@ -36,6 +36,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
         fh->gamma_u     = 0;
         fh->eps_rho     = 0;
         fh->eps_mom     = 0;
+        fh->S_berendsen = 1;
         fh->N[0]        = 5;
         fh->N[1]        = 5;
         fh->N[2]        = 5;
@@ -105,7 +106,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
 
         printf(MAKE_GREEN "FHMD: alpha = %g [nm^2/ps], beta = %g [ps^-1]\n", fh->alpha, fh->beta);
         fprintf(fw, "alpha   = %g           ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps\n", fh->alpha);
-        fprintf(fw, "beta    = %g           ; Beta parameter for du/dt equation, ps^-1\n", fh->beta);
+        fprintf(fw, "beta    = %g           ; Beta parameter for du/dt equation, ps^-1\n\n", fh->beta);
 
         if(fh->scheme == Two_Way)
         {
@@ -116,6 +117,13 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
             fprintf(fw, "eps_rho = %g             ; Eps_rho parameter (FH density fluctuations dissipator)\n", fh->eps_rho);
             fprintf(fw, "eps_mom = %g             ; Eps_mom parameter (FH momentum fluctuations dissipator)\n\n", fh->eps_mom);
         }
+
+        if(fh->S_berendsen >= 0)
+            printf("FHMD: Berendsen thermostat works for S <= %g\n", fh->S_berendsen);
+        else
+            printf("FHMD: Berendsen thermostat with (1 - S^%g) multiplier\n", -fh->S_berendsen);
+        fprintf(fw, "S_berendsen = %g         ; If S_berendsen >= 0, Berendsen thermostat will work for S <= S_berendsen,\n", fh->S_berendsen);
+        fprintf(fw, "                        ; otherwise factor (1-S^(-S_berendsen)) will be applied (local thermostat)\n\n");
 
         for(int d = 0; d < DIM; d++)
         {

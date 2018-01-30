@@ -62,5 +62,10 @@ void fhmd_dump_all(FHMD *fh)
     write_dump(m_star[0],     "m_star_X");
     write_dump(m_star[1],     "m_star_Y");
     write_dump(m_star[2],     "m_star_Z");
+
+    write_dump(S,             "S");
+    write_dump(Sf[0],         "Sf_X");
+    write_dump(Sf[1],         "Sf_Y");
+    write_dump(Sf[2],         "Sf_Z");
 #endif
 }
