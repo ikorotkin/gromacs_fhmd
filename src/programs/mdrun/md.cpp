@@ -1464,40 +1464,35 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 fhmd.step_MD = step;
 
                 /*
+                 * FHMD: Find protein COM if necessary
+                 */
+                if(fhmd.S_function == moving_sphere)
+                    fhmd_find_protein_com(top_global, mdatoms->homenr, state->x, mdatoms->massT, cr, &fhmd);
+
+                /*
+                 * FHMD: Estimate S in the cells and cell faces
+                 */
+                FH_S_precise(&fhmd);        // FH_S(&fhmd), FH_S_weighted(&fhmd) or FH_S_precise(&fhmd)
+
+                /*
                  * FHMD: Update MD variables in the FH cells
                  */
                 fhmd_update_MD_in_FH(state->x, state->v, mdatoms->massT, f, mdatoms->homenr, &fhmd);
 
                 /*
-                 * FHMD: For one-way coupling - make full FH time step
+                 * FHMD: FH/MD Coupling
                  */
                 if(fhmd.scheme == One_Way)
                 {
                     if(MASTER(cr) && !(fhmd.step_MD % fhmd.FH_step))
                         FH_do_single_timestep(&fhmd);
                 }
-
-                /*
-                 * FHMD: Broadcast new FH variables
-                 */
-                if(PAR(cr))
+                else if(fhmd.scheme == Two_Way)
                 {
-                    fhmd_sum_arrays(cr, &fhmd);                             // for selected arrays
-                    gmx_bcast(sizeof(FH_arrays)*fhmd.Ntot, fhmd.arr, cr);   // actually we need this for the pure FH arrays only
-                }
+                    if(PAR(cr)) fhmd_sum_arrays(cr, &fhmd);
 
-                /*
-                 * FHMD: Find protein COM if necessary
-                 */
-                if(fhmd.S < -1.5)
-                    fhmd_find_protein_com(top_global, mdatoms->homenr, state->x, mdatoms->massT, cr, &fhmd);
-
-                /*
-                 * FHMD: For two-way coupling - initialise FH solver
-                 */
-                if(fhmd.scheme == Two_Way)
-                {
-                    if(fhmd.step_MD == 0) FH_init(&fhmd, cr);
+                    if(fhmd.step_MD == 0)
+                        FH_init(&fhmd, cr);
 
                     if(MASTER(cr))
                     {
@@ -1511,6 +1506,16 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                             FH_predictor(&fhmd);
                         }
                     }
+                }
+
+                /*
+                 * FHMD: Broadcast new FH variables
+                 */
+                if(PAR(cr))
+                {
+                    if(fhmd.scheme == One_Way)
+                        fhmd_sum_arrays(cr, &fhmd);                         // for selected arrays
+                    gmx_bcast(sizeof(FH_arrays)*fhmd.Ntot, fhmd.arr, cr);   // actually we need this for the pure FH arrays only
                 }
 
                 /*

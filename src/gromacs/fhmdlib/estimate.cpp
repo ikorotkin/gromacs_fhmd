@@ -87,7 +87,7 @@ void fhmd_print_statistics(FHMD *fh, t_commrec *cr)
     MD_stat *st = &fh->stat;
 
     fhmd_collect_statistics(fh);
-    fhmd_update_statistics(fh);     // It is here for stochastic integration
+    fhmd_update_statistics(fh);     // Every MD time step -- for stochastic integration
 
     if(MASTER(cr))
     {

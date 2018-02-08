@@ -88,7 +88,7 @@ void FH_init(FHMD *fh, t_commrec *cr)
                     arr[C].ron_star = arr[C].ro_md;
 
                     arr[C].ros_md   = 0;
-                    arr[C].ropr_md  = arr[C].ro_md;
+                    arr[C].ropr_md  = arr[C].ro_md_s;
 
                     switch(fh->eos)
                     {
@@ -112,7 +112,7 @@ void FH_init(FHMD *fh, t_commrec *cr)
                         arr[C].u_fh_n[d]  = arr[C].u_fh[d];
 
                         arr[C].uros_md[d]  = 0;
-                        arr[C].uropr_md[d] = arr[C].uro_md[d];
+                        arr[C].uropr_md[d] = arr[C].uro_md_s[d];
 
                         for(int d1 = 0; d1 < DIM; d1++)
                         {
@@ -202,14 +202,15 @@ void FH_predictor(FHMD *fh)
                 }
 
                 // MD source
-                a[C].ros_md = (a[C].ro_md - a[C].ropr_md)*0.5;
+                a[C].ros_md = (a[C].ro_md_s - a[C].ropr_md)*0.5;
 
                 // Mass conservation
                 a[C].ron_prime = a[C].ro_prime + 0.5*DT*(-SUM(FP) + SUM(QP));
-                a[C].ron_star  = a[C].ro_star  + 0.5*DT*(-SUM(FS) + SUM(QS)) + (1 - SC)*a[C].ros_md;
+                a[C].ron_star  = a[C].ro_star  + 0.5*DT*(-SUM(FS) + SUM(QS)) + a[C].ros_md;
                 a[C].ro_fh_n   = a[C].ron_star + a[C].ron_prime;
 
-                a[C].ropr_md    = a[C].ro_md;
+                a[C].ropr_md     = a[C].ro_md_s;
+                a[C].ro_md_prime = a[C].ro_md;
 
                 for(int d = 0; d < DIM; d++)
                 {
@@ -243,14 +244,15 @@ void FH_predictor(FHMD *fh)
                     a[C].f_fh[dim] = -PG[dim] + SUM(TAU) + SUM(TAURAN);
 
                     // MD source
-                    a[C].uros_md[dim] = (a[C].uro_md[dim] - a[C].uropr_md[dim])*0.5;
+                    a[C].uros_md[dim] = (a[C].uro_md_s[dim] - a[C].uropr_md[dim])*0.5;
 
                     // Momentum conservation
                     a[C].mn_prime[dim] = a[C].m_prime[dim] + 0.5*DT*(-SUM(FP) + BP);
-                    a[C].mn_star[dim]  = a[C].m_star[dim]  + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + (1 - SC)*a[C].uros_md[dim];
+                    a[C].mn_star[dim]  = a[C].m_star[dim]  + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + a[C].uros_md[dim];
                     a[C].u_fh_n[dim]   = (a[C].mn_star[dim] + a[C].mn_prime[dim])/a[C].ro_fh_n;
 
-                    a[C].uropr_md[dim]  = a[C].uro_md[dim];
+                    a[C].uropr_md[dim]     = a[C].uro_md_s[dim];
+                    a[C].uro_md_prime[dim] = a[C].uro_md[dim];
                 }
 
                 // Pressure
@@ -296,9 +298,9 @@ void FH_corrector(FHMD *fh)
                              a[L].ufn[d][d]*0.5*((2.0*a[CL].ron_prime - a[CL].ro_prime) + (2.0*a[C].ron_prime - a[C].ro_prime)))/HC;
                     // Source for rho_prime
                     QP[d] = fh->alpha*
-                            (SR*(1 - SR)*((a[CR].ro_fh - a[CR].ropr_md) - (a[C].ro_fh - a[C].ropr_md))/HR -
-                             SL*(1 - SL)*((a[C].ro_fh - a[C].ropr_md) - (a[CL].ro_fh - a[CL].ropr_md))/HL)/HC;      // Layer n
-                    QP[d] += fh->eps_rho*(a[CR].ro_prime - 2.0*a[C].ro_prime + a[CL].ro_prime)/(0.5*DT);            // Layer n
+                            (SR*(1 - SR)*((a[CR].ro_fh - a[CR].ro_md_prime) - (a[C].ro_fh - a[C].ro_md_prime))/HR -
+                             SL*(1 - SL)*((a[C].ro_fh - a[C].ro_md_prime) - (a[CL].ro_fh - a[CL].ro_md_prime))/HL)/HC;      // Layer n
+                    QP[d] += fh->eps_rho*(a[CR].ro_prime - 2.0*a[C].ro_prime + a[CL].ro_prime)/DT;
                 }
 
                 // Mass conservation
@@ -311,11 +313,11 @@ void FH_corrector(FHMD *fh)
                         // Momentum flux for m_prime
                         FP[d] = (a[R].ufn[d][d]*0.5*((2.0*a[CR].mn_prime[dim] - a[CR].m_prime[dim]) + (2.0*a[C].mn_prime[dim] - a[C].m_prime[dim])) -
                                  a[L].ufn[d][d]*0.5*((2.0*a[CL].mn_prime[dim] - a[CL].m_prime[dim]) + (2.0*a[C].mn_prime[dim] - a[C].m_prime[dim])))/HC;
-                        QP[d] = fh->eps_mom*(a[CR].m_prime[dim] - 2.0*a[C].m_prime[dim] + a[CL].m_prime[dim])/(0.5*DT);
+                        QP[d] = fh->eps_mom*(a[CR].m_prime[dim] - 2.0*a[C].m_prime[dim] + a[CL].m_prime[dim])/DT;
                     }
 
                     // Beta-term for m_prime
-                    BP = -fh->beta*SC*(1 - SC)*(a[C].ro_fh*a[C].u_fh[dim] - a[C].uropr_md[dim]);                    // Layer n
+                    BP = -fh->beta*SC*(1 - SC)*(a[C].ro_fh*a[C].u_fh[dim] - a[C].uro_md_prime[dim]);                        // Layer n
 
                     // Momentum conservation
                     a[C].mnn_prime[dim] = a[C].mn_prime[dim] + 0.5*DT*(-SUM(FP) + BP + SUM(QP));
@@ -344,7 +346,7 @@ void FH_corrector(FHMD *fh)
                 }
 
                 // MD Source
-                MDS = (1 - SC)*(a[C].ro_md - a[C].ropr_md - a[C].ros_md);
+                MDS = (a[C].ro_md_s - a[C].ropr_md - a[C].ros_md);
 
                 // Mass conservation
                 a[C].ro_star  = a[C].ron_star  + 0.5*DT*(-SUM(FS) + SUM(QS)) + MDS;
@@ -382,7 +384,7 @@ void FH_corrector(FHMD *fh)
                     BS = fh->beta*SC*(1 - SC)*a[C].mnn_prime[dim];
 
                     // MD Source
-                    MDS = (1 - SC)*(a[C].uro_md[dim] - a[C].uropr_md[dim] - a[C].uros_md[dim]);
+                    MDS = (a[C].uro_md_s[dim] - a[C].uropr_md[dim] - a[C].uros_md[dim]);
 
                     // Momentum conservation
                     a[C].m_star[dim] = a[C].mn_star[dim] + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + MDS;

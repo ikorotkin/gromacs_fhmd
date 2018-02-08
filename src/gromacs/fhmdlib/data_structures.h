@@ -17,10 +17,10 @@
 
 typedef struct FH_arrays                    /* FH/MD arrays */
 {
-    double      ro_md, ro_fh;               /* densities */
+    double      ro_md, ro_fh, ro_md_prime;  /* densities */
     double      inv_ro;                     /* inverse density: 1/ro_md */
     dvec        u_md, u_fh;                 /* velocities */
-    dvec        uro_md;                     /* momentum */
+    dvec        uro_md, uro_md_prime;       /* momentum */
     dvec        f_fh;                       /* FH force */
     dvec        alpha_term;                 /* alpha term for du/dt equation */
     dvec        beta_term;                  /* beta term for du/dt equation */
@@ -34,8 +34,8 @@ typedef struct FH_arrays                    /* FH/MD arrays */
     dvec        m_prime, mn_prime, mnn_prime;       /* m prime */
     dvec        m_star, mn_star;                    /* m star */
 
-    double      ros_md, ropr_md;            /* sources of MD density */
-    dvec        uros_md, uropr_md;          /* sources of MD momentum */
+    double      ro_md_s, ros_md, ropr_md;           /* sources of MD density */
+    dvec        uro_md_s, uros_md, uropr_md;        /* sources of MD momentum */
 
     double      S;                          /* S parameter in the FH cell centres */
     dvec        Sf;                         /* S parameter in the FH cell faces */
@@ -88,6 +88,7 @@ typedef struct FHMD
     double     *mpi_linear;     /* Linear array to summarise MDFH arrays */
 
     int         scheme;         /* 0 - Pure MD, 1 - One-way coupling, 2 - Two-way coupling */
+    FHMD_S      S_function;     /* S = const or S = S(x,y,z) - fixed or moving */
     double      S;              /* Parameter S (-1 - fixed sphere, -2 - moving sphere) */
     double      R1;             /* MD sphere radius for variable S, [0..1] */
     double      R2;             /* FH sphere radius for variable S, [0..1] */

@@ -8,18 +8,18 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms
     FH_arrays *arr = fh->arr;
     dvec       xn;
     int        ind;
-    //double     S = fh->S;
-
-    FH_S(fh);       // Estimate S in the cells and cell faces
+    double     S = fh->S;
 
     /* Reset statistics */
     for(int i = 0; i < fh->Ntot; i++)
     {
-        arr[i].ro_md = 0;
+        arr[i].ro_md   = 0;
+        arr[i].ro_md_s = 0;
 
         for(int d = 0; d < DIM; d++)
         {
-            arr[i].uro_md[d]  = 0;
+            arr[i].uro_md[d]    = 0;
+            arr[i].uro_md_s[d]  = 0;
         }
     }
 
@@ -43,27 +43,31 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms
 
         fh->ind[n] = ind;
 
-        arr[ind].ro_md += mass[n];
-/*
-        if(fh->S < -1)
+        if(fh->S_function == moving_sphere)
             S = fhmd_Sxyz_r(x[n], fh->protein_com, fh);     // MD/FH sphere follows protein
-        else if(fh->S < 0)
+        else if(fh->S_function == fixed_sphere)
             S = fhmd_Sxyz_r(x[n], fh->box05, fh);           // Fixed MD/FH sphere
-*/
+
+        arr[ind].ro_md   += mass[n];
+        arr[ind].ro_md_s += (1 - S)*mass[n];
+
         for(int d = 0; d < DIM; d++)
         {
-            arr[ind].uro_md[d] += v[n][d]*mass[n];
+            arr[ind].uro_md[d]   += v[n][d]*mass[n];
+            arr[ind].uro_md_s[d] += (1 - S)*v[n][d]*mass[n];
         }
     }
 
     /* Update statistics */
     for(int i = 0; i < fh->Ntot; i++)
     {
-        arr[i].ro_md *= fh->grid.ivol[i];
+        arr[i].ro_md   *= fh->grid.ivol[i];
+        arr[i].ro_md_s *= fh->grid.ivol[i];
 
         for(int d = 0; d < DIM; d++)
         {
-            arr[i].uro_md[d] *= fh->grid.ivol[i];
+            arr[i].uro_md[d]   *= fh->grid.ivol[i];
+            arr[i].uro_md_s[d] *= fh->grid.ivol[i];
         }
     }
 }
@@ -80,10 +84,15 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
         fh->mpi_linear[i + fh->Ntot]   = arr[i].uro_md[0];
         fh->mpi_linear[i + fh->Ntot*2] = arr[i].uro_md[1];
         fh->mpi_linear[i + fh->Ntot*3] = arr[i].uro_md[2];
+
+        fh->mpi_linear[i + fh->Ntot*4] = arr[i].ro_md_s;
+        fh->mpi_linear[i + fh->Ntot*5] = arr[i].uro_md_s[0];
+        fh->mpi_linear[i + fh->Ntot*6] = arr[i].uro_md_s[1];
+        fh->mpi_linear[i + fh->Ntot*7] = arr[i].uro_md_s[2];
     }
 
     /* Broadcast linear array */
-    gmx_sumd(fh->Ntot*4, fh->mpi_linear, cr);
+    gmx_sumd(fh->Ntot*8, fh->mpi_linear, cr);
 
     /* Unpack linear array */
     for(int i = 0; i < fh->Ntot; i++)
@@ -92,6 +101,11 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
         arr[i].uro_md[0] = fh->mpi_linear[i + fh->Ntot];
         arr[i].uro_md[1] = fh->mpi_linear[i + fh->Ntot*2];
         arr[i].uro_md[2] = fh->mpi_linear[i + fh->Ntot*3];
+
+        arr[i].ro_md_s     = fh->mpi_linear[i + fh->Ntot*4];
+        arr[i].uro_md_s[0] = fh->mpi_linear[i + fh->Ntot*5];
+        arr[i].uro_md_s[1] = fh->mpi_linear[i + fh->Ntot*6];
+        arr[i].uro_md_s[2] = fh->mpi_linear[i + fh->Ntot*7];
     }
 }
 
@@ -126,9 +140,9 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
 //            arr[i].delta_ro = arr[i].ron_prime;
 //            for(int d = 0; d < DIM; d++)
 //                arr[i].beta_term[d] = fh->beta*arr[i].mn_prime[d];
-            arr[i].delta_ro = arr[i].ro_fh - arr[i].ro_md;                                          // Should be layer n+1/2?
+            arr[i].delta_ro = arr[i].ro_fh - arr[i].ro_md;                                          // Layer n can work better than n+1/2
             for(int d = 0; d < DIM; d++)
-                arr[i].beta_term[d] = fh->beta*(arr[i].u_fh[d]*arr[i].ro_fh - arr[i].uro_md[d]);    // Should be layer n+1/2?
+                arr[i].beta_term[d] = fh->beta*(arr[i].u_fh[d]*arr[i].ro_fh - arr[i].uro_md[d]);    // Layer n can work better than n+1/2
         }
     }
 

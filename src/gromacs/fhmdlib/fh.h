@@ -68,9 +68,9 @@ double DuzDZ_UDC, DuzDZ_UDL, DuzDZ_UDR, DuzDZ_UDB, DuzDZ_UDT, DuzDZ_CDC, DuzDZ_U
 #define HC  fh->grid.h[C][d]
 #define HL  (0.5*(fh->grid.h[CL][d] + fh->grid.h[C][d]))
 #define HR  (0.5*(fh->grid.h[CR][d] + fh->grid.h[C][d]))
-#define SC  a[C].S
 #define SL  a[L].Sf[d]
 #define SR  a[R].Sf[d]
+#define SC  a[C].S
 
 
 #define VISCOUS_FLUX(f) \

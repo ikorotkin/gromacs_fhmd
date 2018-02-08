@@ -89,9 +89,9 @@ void fhmd_do_update_md(int start, int nrend,
                             nbr[0], nbr[1], nbr[2], nbr[3], nbr[4], nbr[5], nbr[6], nbr[7], xi[0], xi[1], xi[2]);
 #endif
 
-                if(fh->S < -1)
+                if(fh->S_function == moving_sphere)
                     S = fhmd_Sxyz_r(x[n], fh->protein_com, fh);     // MD/FH sphere follows protein
-                else if(fh->S < 0)
+                else if(fh->S_function == fixed_sphere)
                     S = fhmd_Sxyz_r(x[n], fh->box05, fh);           // Fixed MD/FH sphere
 
                 if (cTC)
@@ -125,8 +125,8 @@ void fhmd_do_update_md(int start, int nrend,
                     }
                     else if(fh->scheme == Two_Way)
                     {
-                        gamma_u = fh->gamma_u*S*S*dt*(fh->stat.std_u_md[d]*fh->stat.std_u_md[d]/(fh->std_u*fh->std_u) - 1);
-                        gamma_x = fh->gamma_x*S*S*dt*(fh->stat.std_rho_md/fh->std_rho - 1);
+                        gamma_u = fh->gamma_u*S*S*dt*(fh->stat.std_u_fh[d]*fh->stat.std_u_fh[d]/(fh->std_u*fh->std_u) - 1);
+                        gamma_x = fh->gamma_x*S*S*dt*(fh->stat.std_rho_fh/fh->std_rho - 1);
 
                         if(fabs(gamma_u) < g_eps) gamma_u = g_eps;
                         if(fabs(gamma_x) < g_eps) gamma_x = g_eps;

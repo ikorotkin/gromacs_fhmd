@@ -89,10 +89,16 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
             break;
         }
 
-        if(fh->S >= 0.0) {
+        if(fh->S >= 0.0)
+        {
             printf(MAKE_PURPLE "FHMD: S = %g\n", fh->S);
-        } else {
+            fh->S_function = constant_S;
+        }
+        else
+        {
             printf(MAKE_PURPLE "FHMD: S = S(x,y,z) = [%g, %g] with R1 = %g, R2 = %g\n", fh->Smin, fh->Smax, fh->R1, fh->R2);
+            fh->S_function = fixed_sphere;
+
             fh->R1 *= box[0][0]*0.5;
             fh->R2 *= box[0][0]*0.5;
             fh->R12 = fh->R1*fh->R1;
@@ -100,8 +106,11 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
             fh->RS  = (fh->Smax - fh->Smin)/(fh->R2 - fh->R1);
             printf(MAKE_GREEN "FHMD: Absolute values of R [nm]: R1 = %f, R2 = %f\n", fh->R1, fh->R2);
 
-            if(fh->S < -1)
+            if(fh->S < -1.5)
+            {
                 printf(MAKE_PURPLE "FHMD: The MD/FH sphere will follow the protein\n");
+                fh->S_function = moving_sphere;
+            }
         }
 
         printf(MAKE_GREEN "FHMD: alpha = %g [nm^2/ps], beta = %g [ps^-1]\n", fh->alpha, fh->beta);
@@ -235,7 +244,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
     fh->ind  = (int*)calloc(N_atoms, sizeof(int));
     fh->indv = (ivec*)calloc(N_atoms, sizeof(ivec));
 
-    fh->mpi_linear = (double*)malloc(4*fh->Ntot*sizeof(double));   // 4 components: ro_md, uro_md[3]
+    fh->mpi_linear = (double*)malloc(8*fh->Ntot*sizeof(double));   // 8 components: ro_md, uro_md[3], ro_md_s, uro_md_s[3]
 
     if(fh->arr == NULL || fh->ind == NULL || fh->indv == NULL || fh->mpi_linear == NULL)
     {
@@ -267,7 +276,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
         exit(3);
     }
 
-    /* Create FH grid and initialise FH solver */
+    /* Create FH grid and initialize FH solver */
 
     define_FH_grid(cr, fh);
     if(fh->scheme == One_Way)

@@ -9,13 +9,15 @@
 
 #define FHMD_DEBUG                              /* Write debug information */
 //#define FHMD_DEBUG_GRID                       /* Print FH grid coordinates to the screen */
-#define FHMD_DEBUG_FH                         /* Print FH debug information */
-#define FHMD_DEBUG_COM                        /* Print protein COM coordinates */
+#define FHMD_DEBUG_FH                           /* Print FH debug information */
+#define FHMD_DEBUG_COM                          /* Print protein COM coordinates */
 //#define FHMD_DEBUG_INTERPOL                   /* Print interpolated values for debugging */
 
 enum FHMD_SCHEME {Pure_MD, One_Way, Two_Way};   /* List of schemes */
 
-enum FHMD_EOS {eos_argon, eos_spce};            /* Equation of state enumeration */
+enum FHMD_EOS    {eos_argon, eos_spce};         /* Equation of state enumeration */
+
+enum FHMD_S      {constant_S, fixed_sphere, moving_sphere};
 
 /* EOS coefficients for RIGID SPC/E water */
 #define FHMD_EOS_SPCE_MU        409.496
