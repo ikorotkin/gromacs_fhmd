@@ -34,6 +34,8 @@ void fhmd_collect_statistics(FHMD *fh)
 
     for(int i = 0; i < fh->Ntot; i++)
     {
+        if(fh->grid.md[i] == FH_zone) continue;     // Skip pure FH region
+
         st->N++;
 
         st->avg_rho_md_cell[i] += arr[i].ro_md;
@@ -97,17 +99,17 @@ void fhmd_print_statistics(FHMD *fh, t_commrec *cr)
         {
             if(!fh->step_MD)
             {
-                printf("%8s " MAKE_LIGHT_BLUE "%10s " MAKE_BLUE "%10s " MAKE_LIGHT_BLUE "%9s %9s %9s " MAKE_BLUE "%9s %9s %9s " MAKE_LIGHT_BLUE "%9s %9s %9s"
-                       RESET_COLOR "\n",
+                printf("%8s " MAKE_LIGHT_BLUE "%10s " MAKE_BLUE "%10s " MAKE_LIGHT_BLUE "%9s %9s %9s " MAKE_BLUE "%9s %9s %9s " MAKE_LIGHT_BLUE "%9s %9s %9s "
+                       MAKE_BLUE "%9s" RESET_COLOR "\n",
                        "Step", "STD_rho_MD", "STD_rho_FH", "STD_Ux_MD", "STD_Uy_MD", "STD_Uz_MD", "STD_Ux_FH", "STD_Uy_FH", "STD_Uz_FH",
-                       "<Ux_MD>", "<Uy_MD>", "<Uz_MD>");
-                printf("------------------------------------------------------------------------------------------------------------------------\n");
+                       "<Ux_MD>", "<Uy_MD>", "<Uz_MD>", "rho(C)_MD");
+                printf("----------------------------------------------------------------------------------------------------------------------------------\n");
             }
 
             printf("\r%8d " MAKE_LIGHT_BLUE "%10.4f " MAKE_BLUE "%10.4f " MAKE_LIGHT_BLUE "%9.5f %9.5f %9.5f " MAKE_BLUE "%9.5f %9.5f %9.5f "
-                   MAKE_LIGHT_BLUE "%9.2e %9.2e %9.2e",
+                   MAKE_LIGHT_BLUE "%9.2e %9.2e %9.2e" MAKE_BLUE "%10.3f",
                    fh->step_MD, st->std_rho_md, st->std_rho_fh, st->std_u_md[0], st->std_u_md[1], st->std_u_md[2],
-                   st->std_u_fh[0], st->std_u_fh[1], st->std_u_fh[2], st->avg_u_md[0], st->avg_u_md[1], st->avg_u_md[2]);
+                   st->std_u_fh[0], st->std_u_fh[1], st->std_u_fh[2], st->avg_u_md[0], st->avg_u_md[1], st->avg_u_md[2], fh->arr[fh->Ntot/2].ro_md);
 
             printf(RESET_COLOR "\n");
 

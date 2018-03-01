@@ -40,6 +40,9 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
         fh->N[0]        = 5;
         fh->N[1]        = 5;
         fh->N[2]        = 5;
+        fh->N_md[0]     = fh->N[0];
+        fh->N_md[1]     = fh->N[1];
+        fh->N_md[2]     = fh->N[2];
         fh->FH_EOS      = 1;
         fh->FH_step     = 10;
         fh->FH_equil    = 10000;
@@ -139,17 +142,35 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
             fh->box[d]         = box[d][d];
             fh->box05[d]       = 0.5*fh->box[d];
             fh->protein_com[d] = fh->box05[d];
+            fh->N_shift[d]     = (fh->N[d] - fh->N_md[d])/2;
         }
 
         fh->box_volume = fh->box[0]*fh->box[1]*fh->box[2];
 
-        printf("FHMD: MD/FH box size: %g x %g x %g [nm]\n", fh->box[0], fh->box[1], fh->box[2]);
-        printf("FHMD: FH grid size:   %d x %d x %d\n", fh->N[0], fh->N[1], fh->N[2]);
+        printf("FHMD: MD box size:  %g x %g x %g [nm]\n", fh->box[0], fh->box[1], fh->box[2]);
+        printf("FHMD: FH grid size: %d x %d x %d\n", fh->N[0], fh->N[1], fh->N[2]);
         fprintf(fw, "Nx = %d                  ; Number of FH cells along X axis\n", fh->N[0]);
         fprintf(fw, "Ny = %d                  ; Number of FH cells along Y axis\n", fh->N[1]);
         fprintf(fw, "Nz = %d                  ; Number of FH cells along Z axis\n\n", fh->N[2]);
 
-        fh->Ntot  = fh->N[0]*fh->N[1]*fh->N[2];
+        if(fh->scheme == Two_Way)
+        {
+            printf("FHMD: Small-scale MD/FH grid size: %d x %d x %d\n", fh->N_md[0], fh->N_md[1], fh->N_md[2]);
+            fprintf(fw, "NxMD = %d                ; Number of small-scale MD-FH cells along X axis\n", fh->N_md[0]);
+            fprintf(fw, "NyMD = %d                ; Number of small-scale MD-FH cells along Y axis\n", fh->N_md[1]);
+            fprintf(fw, "NzMD = %d                ; Number of small-scale MD-FH cells along Z axis\n\n", fh->N_md[2]);
+        }
+        else
+        {
+            for(int d = 0; d < DIM; d++)
+            {
+                fh->N_shift[d] = 0;
+                fh->N_md[d]    = fh->N[d];
+            }
+        }
+
+        fh->Ntot    = fh->N[0]*fh->N[1]*fh->N[2];
+        fh->Ntot_md = fh->N_md[0]*fh->N_md[1]*fh->N_md[2];
 
         switch(fh->FH_EOS)
         {
@@ -258,6 +279,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
     fh->grid.h    = (dvec*)malloc(fh->Ntot*sizeof(dvec));
     fh->grid.vol  = (double*)malloc(fh->Ntot*sizeof(double));
     fh->grid.ivol = (double*)malloc(fh->Ntot*sizeof(double));
+    fh->grid.md   = (FHMD_CELL*)malloc(fh->Ntot*sizeof(FHMD_CELL));
 
     if(fh->grid.c == NULL || fh->grid.n == NULL || fh->grid.h == NULL || fh->grid.vol == NULL || fh->grid.ivol == NULL)
     {
@@ -281,6 +303,15 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
     define_FH_grid(cr, fh);
     if(fh->scheme == One_Way)
         FH_init(fh, cr);
+
+    for(int i = 0; i < fh->Ntot; i++)
+    {
+        fh->arr[i].S = 1;
+        for(int d = 0; d < DIM; d++)
+        {
+            fh->arr[i].Sf[d] = 1;
+        }
+    }
 
     if(MASTER(cr))
     {

@@ -74,9 +74,10 @@ void fhmd_do_update_md(int start, int nrend,
 
                 trilinear_find_neighbours(x[n], n, xi, nbr, fh);
 
-                clear_dvec(f_fh);
                 if(fh->scheme == Two_Way)
                     trilinear_interpolation(f_fh,   xi, INTERPOLATE(f_fh));
+                else
+                    clear_dvec(f_fh);
                 trilinear_interpolation(u_fh,       xi, INTERPOLATE(u_fh));
                 trilinear_interpolation(alpha_term, xi, INTERPOLATE(alpha_term));
                 trilinear_interpolation(beta_term,  xi, INTERPOLATE(beta_term));
@@ -125,8 +126,8 @@ void fhmd_do_update_md(int start, int nrend,
                     }
                     else if(fh->scheme == Two_Way)
                     {
-                        gamma_u = fh->gamma_u*S*S*dt*(fh->stat.std_u_fh[d]*fh->stat.std_u_fh[d]/(fh->std_u*fh->std_u) - 1);
-                        gamma_x = fh->gamma_x*S*S*dt*(fh->stat.std_rho_fh/fh->std_rho - 1);
+                        gamma_u = fh->gamma_u*S*S*S*S*dt*(fh->stat.std_u_fh[d]*fh->stat.std_u_fh[d]/(fh->std_u*fh->std_u) - 1);
+                        gamma_x = fh->gamma_x*S*S*S*S*dt*(fh->stat.std_rho_fh/fh->std_rho - 1);
 
                         if(fabs(gamma_u) < g_eps) gamma_u = g_eps;
                         if(fabs(gamma_x) < g_eps) gamma_x = g_eps;

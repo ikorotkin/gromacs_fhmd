@@ -17,25 +17,17 @@
 
 typedef struct FH_arrays                    /* FH/MD arrays */
 {
-    double      ro_md, ro_fh, ro_md_prime;  /* densities */
+    double      ro_md, ro_fh;               /* densities */
     double      inv_ro;                     /* inverse density: 1/ro_md */
     dvec        u_md, u_fh;                 /* velocities */
-    dvec        uro_md, uro_md_prime;       /* momentum */
+    dvec        uro_md;                     /* momentum */
     dvec        f_fh;                       /* FH force */
     dvec        alpha_term;                 /* alpha term for du/dt equation */
     dvec        beta_term;                  /* beta term for du/dt equation */
 
-    double      delta_ro;                   /* delta rho for 1-way coupling or ro_prime for 2-way */
+    double      delta_ro;                   /* delta of MD and FH densities */
     dvec        grad_ro;                    /* grad of density */
     matrix      alpha_u_grad;               /* preliminary alpha-term [u-index][grad-index] */
-
-    double      ro_prime, ron_prime, ronn_prime;    /* density prime */
-    double      ro_star, ron_star;                  /* density star */
-    dvec        m_prime, mn_prime, mnn_prime;       /* m prime */
-    dvec        m_star, mn_star;                    /* m star */
-
-    double      ro_md_s, ros_md, ropr_md;           /* sources of MD density */
-    dvec        uro_md_s, uros_md, uropr_md;        /* sources of MD momentum */
 
     double      S;                          /* S parameter in the FH cell centres */
     dvec        Sf;                         /* S parameter in the FH cell faces */
@@ -46,6 +38,19 @@ typedef struct FH_arrays                    /* FH/MD arrays */
     double      ro_fh_n;                    /* FH density (new time layer) */
     dvec        u_fh_n;                     /* FH velocity (new time layer) */
     matrix      rans;                       /* FH random stress */
+
+    double      ro_md_prime;                /* MD density from layer n */
+    dvec        uro_md_prime;               /* MD momentum from layer n */
+
+    double      ro_prime, ron_prime, ronn_prime;    /* density prime */
+    double      ro_prime_b;                         /* density prime on the boundary */
+    double      ro_star, ron_star;                  /* density star */
+    dvec        m_prime, mn_prime, mnn_prime;       /* momentum prime */
+    dvec        m_prime_b;                          /* momentum prime on the boundary */
+    dvec        m_star, mn_star;                    /* momentum star */
+
+    double      ro_md_s, ros_md, ropr_md;           /* sources of MD density */
+    dvec        uro_md_s, uros_md, uropr_md;        /* sources of MD momentum */
 } FH_arrays;
 
 
@@ -56,6 +61,7 @@ typedef struct FH_grid          /* Computational grid */
     dvec       *h;              /* FH cell steps */
     double     *vol;            /* FH cell volume */
     double     *ivol;           /* 1/cellVolume */
+    FHMD_CELL  *md;             /* The cell is in the FH_zone, hybrid_zone or boundary */
 } FH_grid;
 
 
@@ -87,8 +93,8 @@ typedef struct FHMD
     ivec       *indv;           /* 3-component FH cell number for each atom (vector) */
     double     *mpi_linear;     /* Linear array to summarise MDFH arrays */
 
-    int         scheme;         /* 0 - Pure MD, 1 - One-way coupling, 2 - Two-way coupling */
     FHMD_S      S_function;     /* S = const or S = S(x,y,z) - fixed or moving */
+    int         scheme;         /* 0 - Pure MD, 1 - One-way coupling, 2 - Two-way coupling */
     double      S;              /* Parameter S (-1 - fixed sphere, -2 - moving sphere) */
     double      R1;             /* MD sphere radius for variable S, [0..1] */
     double      R2;             /* FH sphere radius for variable S, [0..1] */
@@ -102,10 +108,9 @@ typedef struct FHMD
     double      eps_rho;        /* Eps_rho parameter for ro_prime FH equation (dissipator factor, 0 <= eps_rho <= 1) */
     double      eps_mom;        /* Eps_mom parameter for m_prime FH equation (dissipator factor, 0 <= eps_mom <= 1) */
     double      S_berendsen;    /* If S_berendsen >= 0, Berendsen thermostat works for S <= S_berendsen, otherwise factor (1-S^(-S_berendsen)) is applied */
-    double      std_rho;        /* Analytical STD of density */
-    double      std_u;          /* Analytical STD of velocity */
 
-    ivec        N;              /* Number of FH cells along each direction */
+    ivec        N, N_md;        /* Number of FH cells along each direction */
+    ivec        N_shift;        /* N_shift = (N - N_md)/2 */
     dvec        box;            /* Box size */
     dvec        box05;          /* Half of box size */
     dvec        protein_com;    /* Protein COM coordinates */
@@ -113,18 +118,20 @@ typedef struct FHMD
     int         protein_N;      /* Number of atoms in the protein */
     double      box_volume;     /* Volume of the box, nm^3 */
     double      total_density;  /* Total density of the box, a.m.u./nm^3 */
-    int         Ntot;           /* Total number of FH cells */
+    int         Ntot, Ntot_md;  /* Total number of FH cells */
     int         step_MD;        /* Current MD time step */
     int         Noutput;        /* Write arrays to files every Noutput MD time steps (0 - do not write) */
 
-    int         FH_EOS;         /* EOS: 0 - Liquid Argon, 1 - SPC/E water */
     FHMD_EOS    eos;            /* Equation of state */
+    int         FH_EOS;         /* EOS: 0 - Liquid Argon, 1 - SPC/E water */
     int         FH_step;        /* dt_FH = FH_step * dt_MD */
     int         FH_equil;       /* Number of time steps for the FH model equilibration */
     double      FH_dens;        /* FH mean density */
     double      FH_temp;        /* FH mean temperature */
     double      FH_blend;       /* FH Blending: -1 - dynamic, or define static blending parameter (0.0 = Central Diff., 1.0 = Classic CABARET) */
     double      dt_FH;          /* FH time step */
+    double      std_rho;        /* Analytical STD of density */
+    double      std_u;          /* Analytical STD of velocity */
 } FHMD;
 
 #endif /* FHMD_DATA_STRUCTURES_H_ */

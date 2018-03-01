@@ -33,8 +33,8 @@ void FH_init(FHMD *fh, t_commrec *cr)
         break;
     }
 
-    fh->std_rho = sqrt(fh->FH_temp*fh->FH_dens*FHMD_kB/(fh->box_volume/(double)(fh->Ntot)))/SOUND;
-    fh->std_u   = sqrt(fh->FH_temp*FHMD_kB/(fh->FH_dens*fh->box_volume/(double)(fh->Ntot)));
+    fh->std_rho = sqrt(fh->FH_temp*fh->FH_dens*FHMD_kB/(fh->box_volume/(double)(fh->Ntot_md)))/SOUND;
+    fh->std_u   = sqrt(fh->FH_temp*FHMD_kB/(fh->FH_dens*fh->box_volume/(double)(fh->Ntot_md)));
 
     if(MASTER(cr))
     {
@@ -74,6 +74,16 @@ void FH_init(FHMD *fh, t_commrec *cr)
         break;
 
     case Two_Way:
+        avg_rho = 0;
+        for(int i = 0; i < fh->Ntot; i++)
+        {
+            if(fh->grid.md[i] == FH_zone)
+                arr[i].ro_md_prime = fh->FH_dens;
+            else
+                arr[i].ro_md_prime = arr[i].ro_md;
+
+            avg_rho += arr[i].ro_md_prime;
+        }
         for(int k = 0; k < NZ; k++)
         {
             for(int j = 0; j < NY; j++)
@@ -82,10 +92,10 @@ void FH_init(FHMD *fh, t_commrec *cr)
                 {
                     ASSIGN_IND(ind, i, j, k);
 
-                    arr[C].ro_fh    = arr[C].ro_md;
-                    arr[C].ro_fh_n  = arr[C].ro_md;
-                    arr[C].ro_star  = arr[C].ro_md;
-                    arr[C].ron_star = arr[C].ro_md;
+                    arr[C].ro_fh    = arr[C].ro_md_prime;
+                    arr[C].ro_fh_n  = arr[C].ro_md_prime;
+                    arr[C].ro_star  = arr[C].ro_md_prime;
+                    arr[C].ron_star = arr[C].ro_md_prime;
 
                     arr[C].ros_md   = 0;
                     arr[C].ropr_md  = arr[C].ro_md_s;
@@ -93,22 +103,22 @@ void FH_init(FHMD *fh, t_commrec *cr)
                     switch(fh->eos)
                     {
                     case eos_argon:
-                        arr[C].p  = EOS_D*(1.0/3.0*EOS_A*EOS_A*pow(EOS_E*arr[C].ro_md - EOS_B, 3) + EOS_C);
+                        arr[C].p  = EOS_D*(1.0/3.0*EOS_A*EOS_A*pow(EOS_E*arr[C].ro_md_prime - EOS_B, 3) + EOS_C);
                         arr[C].pn = arr[C].p;
                         break;
                     case eos_spce:
-                        arr[C].p  = arr[C].ro_md*(arr[C].ro_md*EOS_A + EOS_B) + EOS_C;
+                        arr[C].p  = arr[C].ro_md_prime*(arr[C].ro_md_prime*EOS_A + EOS_B) + EOS_C;
                         arr[C].pn = arr[C].p;
                         break;
                     }
 
                     for(int d = 0; d < DIM; d++)
                     {
-                        arr[L].rof[d]     = 0.5*(arr[CL].ro_md + arr[C].ro_md);
+                        arr[L].rof[d]     = 0.5*(arr[CL].ro_md_prime + arr[C].ro_md_prime);
                         arr[L].rofn[d]    = arr[L].rof[d];
                         arr[C].m_star[d]  = arr[C].uro_md[d];
                         arr[C].mn_star[d] = arr[C].uro_md[d];
-                        arr[C].u_fh[d]    = arr[C].uro_md[d]/arr[C].ro_md;
+                        arr[C].u_fh[d]    = arr[C].uro_md[d]/arr[C].ro_md_prime;
                         arr[C].u_fh_n[d]  = arr[C].u_fh[d];
 
                         arr[C].uros_md[d]  = 0;
@@ -116,7 +126,7 @@ void FH_init(FHMD *fh, t_commrec *cr)
 
                         for(int d1 = 0; d1 < DIM; d1++)
                         {
-                            arr[L].uf[d1][d]  = 0.5*(arr[CL].uro_md[d1]/arr[CL].ro_md + arr[C].uro_md[d1]/arr[C].ro_md);
+                            arr[L].uf[d1][d]  = 0.5*(arr[CL].uro_md[d1]/arr[CL].ro_md_prime + arr[C].uro_md[d1]/arr[C].ro_md_prime);
                             arr[L].ufn[d1][d] = arr[L].uf[d1][d];
                         }
                     }
@@ -163,6 +173,24 @@ void FH_init(FHMD *fh, t_commrec *cr)
 }
 
 
+void rho_tilde_rescale(FHMD *fh)
+{
+    RHO_AVG = 0;
+
+    for(int i = 0; i < fh->Ntot; i++)
+    {
+        RHO_AVG += fh->arr[i].ro_fh;
+    }
+
+    double coef = avg_rho/RHO_AVG;
+
+    for(int i = 0; i < fh->Ntot; i++)
+    {
+        fh->arr[i].ro_fh *= coef;
+    }
+}
+
+
 void FH_predictor(FHMD *fh)
 {
     FH_arrays *a = fh->arr, *arr = fh->arr;
@@ -173,8 +201,69 @@ void FH_predictor(FHMD *fh)
     matrix TAUL, TAUR;
     double BP, BS;
 
-    compute_random_stress(fh);
+    //rho_tilde_rescale(fh);
 
+    compute_random_stress(fh);
+/*
+    for(int k = 0; k < NZ; k++)
+    {
+        for(int j = 0; j < NY; j++)
+        {
+            for(int i = 0; i < NX; i++)
+            {
+                ASSIGN_IND(ind, i, j, k);
+
+                if(fh->grid.md[C] == boundary)
+                {
+                    for(int d = 0; d < DIM; d++)
+                    {
+                        if(a[L].uf[d][d] < 0)
+                            a[CL].ro_prime_b = 2.0*a[C].ro_prime - a[CR].ro_prime;
+                        else
+                            a[CL].ro_prime_b = -a[C].ro_prime;  // or 0?
+
+                        if(a[R].uf[d][d] > 0)
+                            a[CR].ro_prime_b = 2.0*a[C].ro_prime - a[CL].ro_prime;
+                        else
+                            a[CR].ro_prime_b = -a[C].ro_prime;  // or 0?
+
+                        for(int dim = 0; dim < DIM; dim++)
+                        {
+                            if(a[L].uf[d][d] < 0)
+                                a[CL].m_prime_b[dim] = 2.0*a[C].m_prime[dim] - a[CR].m_prime[dim];
+                            else
+                                a[CL].m_prime_b[dim] = -a[C].m_prime[dim];  // or 0?
+
+                            if(a[R].uf[d][d] > 0)
+                                a[CR].m_prime_b[dim] = 2.0*a[C].m_prime[dim] - a[CL].m_prime[dim];
+                            else
+                                a[CR].m_prime_b[dim] = -a[C].m_prime[dim];  // or 0?
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for(int k = 0; k < NZ; k++)
+    {
+        for(int j = 0; j < NY; j++)
+        {
+            for(int i = 0; i < NX; i++)
+            {
+                ASSIGN_IND(ind, i, j, k);
+
+                if(fh->grid.md[C] != FH_zone)
+                {
+                    a[C].ro_prime_b = a[C].ro_prime;
+
+                    for(int dim = 0; dim < DIM; dim++)
+                        a[C].m_prime_b[dim] = a[C].m_prime[dim];
+                }
+            }
+        }
+    }
+*/
     for(int k = 0; k < NZ; k++)
     {
         for(int j = 0; j < NY; j++)
@@ -186,19 +275,26 @@ void FH_predictor(FHMD *fh)
                 for(int d = 0; d < DIM; d++)
                 {
                     // Mass flux for rho_prime
-                    FP[d] = (a[R].uf[d][d]*0.5*(a[CR].ro_prime + a[C].ro_prime) -
+                    FP[d] = (a[R].uf[d][d]*0.5*(a[CR].ro_prime + a[C].ro_prime) -           // _b was here
                              a[L].uf[d][d]*0.5*(a[CL].ro_prime + a[C].ro_prime))/HC;
+
                     // Source for rho_prime
                     QP[d] = fh->alpha*
                             (SR*(1 - SR)*((a[CR].ro_fh - a[CR].ro_md) - (a[C].ro_fh - a[C].ro_md))/HR -
                              SL*(1 - SL)*((a[C].ro_fh - a[C].ro_md) - (a[CL].ro_fh - a[CL].ro_md))/HL)/HC;
+
+                    if(fh->grid.md[C] == boundary) QP[d] = 0;
+
                     // Mass flux for rho_star
                     FS[d] = (SR*a[R].uf[d][d]*0.5*(a[CR].ro_star + a[C].ro_star) -
                              SL*a[L].uf[d][d]*0.5*(a[CL].ro_star + a[C].ro_star))/HC;
+
                     // Source for rho_star
                     QS[d] = -fh->alpha*
                             (SR*(1 - SR)*(a[CR].ro_prime - a[C].ro_prime)/HR -
                              SL*(1 - SL)*(a[C].ro_prime - a[CL].ro_prime)/HL)/HC;
+
+                    if(fh->grid.md[C] == boundary) QS[d] = 0;
                 }
 
                 // MD source
@@ -206,6 +302,9 @@ void FH_predictor(FHMD *fh)
 
                 // Mass conservation
                 a[C].ron_prime = a[C].ro_prime + 0.5*DT*(-SUM(FP) + SUM(QP));
+
+                if(fh->grid.md[C] == FH_zone) a[C].ron_prime = 0;
+
                 a[C].ron_star  = a[C].ro_star  + 0.5*DT*(-SUM(FS) + SUM(QS)) + a[C].ros_md;
                 a[C].ro_fh_n   = a[C].ron_star + a[C].ron_prime;
 
@@ -225,13 +324,16 @@ void FH_predictor(FHMD *fh)
                     for(int d = 0; d < DIM; d++)
                     {
                         // Momentum flux for m_prime
-                        FP[d] = (a[R].uf[d][d]*0.5*(a[CR].m_prime[dim] + a[C].m_prime[dim]) -
+                        FP[d] = (a[R].uf[d][d]*0.5*(a[CR].m_prime[dim] + a[C].m_prime[dim]) -       // _b was here
                                  a[L].uf[d][d]*0.5*(a[CL].m_prime[dim] + a[C].m_prime[dim]))/HC;
+
                         // Momentum flux for m_star
                         FS[d] = (SR*a[R].uf[d][d]*0.5*(a[CR].m_star[dim] + a[C].m_star[dim]) -
                                  SL*a[L].uf[d][d]*0.5*(a[CL].m_star[dim] + a[C].m_star[dim]))/HC;
+
                         // Viscous stress
                         TAU[d]    = (TAUR[dim][d] - TAUL[dim][d])/HC;
+
                         // Random stress
                         TAURAN[d] = (a[R].rans[dim][d] - a[L].rans[dim][d])/HC;
                     }
@@ -248,6 +350,9 @@ void FH_predictor(FHMD *fh)
 
                     // Momentum conservation
                     a[C].mn_prime[dim] = a[C].m_prime[dim] + 0.5*DT*(-SUM(FP) + BP);
+
+                    if(fh->grid.md[C] == FH_zone) a[C].mn_prime[dim] = 0;
+
                     a[C].mn_star[dim]  = a[C].m_star[dim]  + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + a[C].uros_md[dim];
                     a[C].u_fh_n[dim]   = (a[C].mn_star[dim] + a[C].mn_prime[dim])/a[C].ro_fh_n;
 
@@ -282,6 +387,72 @@ void FH_corrector(FHMD *fh)
     double BP, BS, MDS;
 
     FH_char(fh);
+/*
+    for(int k = 0; k < NZ; k++)
+    {
+        for(int j = 0; j < NY; j++)
+        {
+            for(int i = 0; i < NX; i++)
+            {
+                ASSIGN_IND(ind, i, j, k);
+
+                if(fh->grid.md[C] == boundary)
+                {
+                    for(int d = 0; d < DIM; d++)
+                    {
+                        if(a[L].ufn[d][d] < 0)
+                            a[CL].ro_prime_b = 2.0*(2.0*a[C].ron_prime - a[C].ro_prime) - (2.0*a[CR].ron_prime - a[CR].ro_prime);
+                        else
+                            a[CL].ro_prime_b = -(2.0*a[C].ron_prime - a[C].ro_prime);  // or 0?
+
+                        if(a[R].ufn[d][d] > 0)
+                            a[CR].ro_prime_b = 2.0*(2.0*a[C].ron_prime - a[C].ro_prime) - (2.0*a[CL].ron_prime - a[CL].ro_prime);
+                        else
+                            a[CR].ro_prime_b = -(2.0*a[C].ron_prime - a[C].ro_prime);  // or 0?
+
+                        for(int dim = 0; dim < DIM; dim++)
+                        {
+                            if(a[L].ufn[d][d] < 0)
+                                a[CL].m_prime_b[dim] = 2.0*(2.0*a[C].mn_prime[dim] - a[C].m_prime[dim]) - (2.0*a[CR].mn_prime[dim] - a[CR].m_prime[dim]);
+                            else
+                                a[CL].m_prime_b[dim] = -(2.0*a[C].mn_prime[dim] - a[C].m_prime[dim]);  // or 0?
+
+                            if(a[R].ufn[d][d] > 0)
+                                a[CR].m_prime_b[dim] = 2.0*(2.0*a[C].mn_prime[dim] - a[C].m_prime[dim]) - (2.0*a[CL].mn_prime[dim] - a[CL].m_prime[dim]);
+                            else
+                                a[CR].m_prime_b[dim] = -(2.0*a[C].mn_prime[dim] - a[C].m_prime[dim]);  // or 0?
+                        }
+                    }
+                }
+            }
+        }
+    }
+*/
+    for(int k = 0; k < NZ; k++)
+    {
+        for(int j = 0; j < NY; j++)
+        {
+            for(int i = 0; i < NX; i++)
+            {
+                ASSIGN_IND(ind, i, j, k);
+
+                if(fh->grid.md[C] != FH_zone)
+                {
+                    a[C].ro_prime_b = (2.0*a[C].ron_prime - a[C].ro_prime);
+
+                    for(int dim = 0; dim < DIM; dim++)
+                        a[C].m_prime_b[dim] = (2.0*a[C].mn_prime[dim] - a[C].m_prime[dim]);
+                }
+                else
+                {
+                    a[C].ro_prime_b = 0;
+
+                    for(int dim = 0; dim < DIM; dim++)
+                        a[C].m_prime_b[dim] = 0;
+                }
+            }
+        }
+    }
 
     for(int k = 0; k < NZ; k++)
     {
@@ -294,26 +465,35 @@ void FH_corrector(FHMD *fh)
                 for(int d = 0; d < DIM; d++)
                 {
                     // Mass flux for rho_prime
-                    FP[d] = (a[R].ufn[d][d]*0.5*((2.0*a[CR].ron_prime - a[CR].ro_prime) + (2.0*a[C].ron_prime - a[C].ro_prime)) -
-                             a[L].ufn[d][d]*0.5*((2.0*a[CL].ron_prime - a[CL].ro_prime) + (2.0*a[C].ron_prime - a[C].ro_prime)))/HC;
+                    FP[d] = (a[R].ufn[d][d]*0.5*(a[CR].ro_prime_b + a[C].ro_prime_b) -          // _b
+                             a[L].ufn[d][d]*0.5*(a[CL].ro_prime_b + a[C].ro_prime_b))/HC;
+
                     // Source for rho_prime
                     QP[d] = fh->alpha*
                             (SR*(1 - SR)*((a[CR].ro_fh - a[CR].ro_md_prime) - (a[C].ro_fh - a[C].ro_md_prime))/HR -
                              SL*(1 - SL)*((a[C].ro_fh - a[C].ro_md_prime) - (a[CL].ro_fh - a[CL].ro_md_prime))/HL)/HC;      // Layer n
+
                     QP[d] += fh->eps_rho*(a[CR].ro_prime - 2.0*a[C].ro_prime + a[CL].ro_prime)/DT;
+
+                    if(fh->grid.md[C] == boundary) QP[d] = 0;
                 }
 
                 // Mass conservation
                 a[C].ronn_prime = a[C].ron_prime + 0.5*DT*(-SUM(FP) + SUM(QP));
+
+                if(fh->grid.md[C] == FH_zone) a[C].ronn_prime = 0;
 
                 for(int dim = 0; dim < DIM; dim++)
                 {
                     for(int d = 0; d < DIM; d++)
                     {
                         // Momentum flux for m_prime
-                        FP[d] = (a[R].ufn[d][d]*0.5*((2.0*a[CR].mn_prime[dim] - a[CR].m_prime[dim]) + (2.0*a[C].mn_prime[dim] - a[C].m_prime[dim])) -
-                                 a[L].ufn[d][d]*0.5*((2.0*a[CL].mn_prime[dim] - a[CL].m_prime[dim]) + (2.0*a[C].mn_prime[dim] - a[C].m_prime[dim])))/HC;
+                        FP[d] = (a[R].ufn[d][d]*0.5*(a[CR].m_prime_b[dim] + a[C].m_prime_b[dim]) -          // _b
+                                 a[L].ufn[d][d]*0.5*(a[CL].m_prime_b[dim] + a[C].m_prime_b[dim]))/HC;
+
                         QP[d] = fh->eps_mom*(a[CR].m_prime[dim] - 2.0*a[C].m_prime[dim] + a[CL].m_prime[dim])/DT;
+
+                        if(fh->grid.md[C] == boundary) QP[d] = 0;
                     }
 
                     // Beta-term for m_prime
@@ -321,6 +501,8 @@ void FH_corrector(FHMD *fh)
 
                     // Momentum conservation
                     a[C].mnn_prime[dim] = a[C].mn_prime[dim] + 0.5*DT*(-SUM(FP) + BP + SUM(QP));
+
+                    if(fh->grid.md[C] == FH_zone) a[C].mnn_prime[dim] = 0;
                 }
             }
         }
@@ -339,10 +521,13 @@ void FH_corrector(FHMD *fh)
                     // Mass flux for rho_star
                     FS[d] = (SR*a[R].ufn[d][d]*(a[R].rofn[d] - 0.5*(a[CR].ronn_prime + a[C].ronn_prime)) -
                              SL*a[L].ufn[d][d]*(a[L].rofn[d] - 0.5*(a[CL].ronn_prime + a[C].ronn_prime)))/HC;
+
                     // Source for rho_star
                     QS[d] = -fh->alpha*
                             (SR*(1 - SR)*(a[CR].ronn_prime - a[C].ronn_prime)/HR -
                              SL*(1 - SL)*(a[C].ronn_prime - a[CL].ronn_prime)/HL)/HC;
+
+                    if((fh->grid.md[C] == boundary) || (fh->grid.md[C] == FH_zone)) QS[d] = 0;
                 }
 
                 // MD Source
@@ -366,6 +551,7 @@ void FH_corrector(FHMD *fh)
                     {
                         // Viscous stress
                         TAU[d]    = (TAUR[dim][d] - TAUL[dim][d])/HC;
+
                         // Random stress
                         TAURAN[d] = (a[R].rans[dim][d] - a[L].rans[dim][d])/HC;
                     }
@@ -839,11 +1025,11 @@ void swap_var(FHMD *fh)
 
     for(int i = 0; i < fh->Ntot; i++)
     {
-        arr[i].ro_prime = arr[i].ronn_prime;
+        if(fh->scheme == Two_Way) arr[i].ro_prime = arr[i].ronn_prime;
 
         for(int d = 0; d < DIM; d++)
         {
-            arr[i].m_prime[d] = arr[i].mnn_prime[d];
+            if(fh->scheme == Two_Way) arr[i].m_prime[d] = arr[i].mnn_prime[d];
 
             arr[i].rof[d] = arr[i].rofn[d];
             arr[i].pf[d]  = arr[i].pfn[d];
@@ -964,7 +1150,30 @@ void define_FH_grid(t_commrec *cr, FHMD *fh)
     ivec ind;
 
     for(int d = 0; d < DIM; d++)
-        h0[d] = fh->box[d]/(double)(fh->N[d]);
+        h0[d] = fh->box[d]/(double)(fh->N_md[d]);
+
+    for(int k = 0; k < NZ; k++)
+    {
+        for(int j = 0; j < NY; j++)
+        {
+            for(int i = 0; i < NX; i++)
+            {
+                ASSIGN_IND(ind, i, j, k);
+
+                fh->grid.md[C] = hybrid_zone;           // cell C is inside MD/FH region by default
+
+                for(int d = 0; d < DIM; d++)
+                {
+                    fh->grid.h[C][d] = h0[d];
+                    fh->grid.n[C][d] = (double)(ind[d] - fh->N_shift[d])*h0[d];
+                    fh->grid.c[C][d] = fh->grid.n[C][d] + 0.5*h0[d];
+
+                    if((ind[d] == fh->N_shift[d]) || (ind[d] == (fh->N_md[d] + fh->N_shift[d] - 1)))
+                        fh->grid.md[C] = boundary;      // cell C is inside MD/FH region but on the boundary
+                }
+            }
+        }
+    }
 
     for(int k = 0; k < NZ; k++)
     {
@@ -976,9 +1185,8 @@ void define_FH_grid(t_commrec *cr, FHMD *fh)
 
                 for(int d = 0; d < DIM; d++)
                 {
-                    fh->grid.h[C][d] = h0[d];
-                    fh->grid.n[C][d] = (double)(ind[d])*h0[d];
-                    fh->grid.c[C][d] = fh->grid.n[C][d] + 0.5*h0[d];
+                    if((ind[d] < fh->N_shift[d])  || (ind[d] >= (fh->N_md[d] + fh->N_shift[d])))
+                        fh->grid.md[C] = FH_zone;       // cell C is outside MD/FH region
                 }
             }
         }

@@ -1528,7 +1528,12 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                  */
                 if(MASTER(cr) && (fhmd.Noutput > 0))
                     if(!(fhmd.step_MD % fhmd.Noutput))
+                    {
                         fhmd_dump_all(&fhmd);
+#ifdef FHMD_TECPLOT
+                        fhmd_write_tecplot_data(&fhmd, fhmd.step_MD/fhmd.FH_step, (double)(fhmd.step_MD/fhmd.FH_step)*fhmd.dt_FH);
+#endif
+                    }
 
                 /*
                  * FHMD: Collect and print statistics

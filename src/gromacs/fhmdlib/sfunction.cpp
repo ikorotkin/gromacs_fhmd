@@ -67,42 +67,62 @@ void FH_S_weighted(FHMD *fh)
 
 void FH_S_precise(FHMD *fh)
 {
-    dvec coords;
+    dvec coordl, coordr;
+    ivec ind;
 
-    for(int i = 0; i < fh->Ntot; i++)
+    for(int k = fh->N_shift[2]; k < (fh->N_md[2] + fh->N_shift[2]); k++)
     {
-        if(fh->S_function == moving_sphere)
-            fh->arr[i].S = fhmd_Sxyz_d(fh->grid.c[i], fh->protein_com, fh);         // MD/FH sphere follows protein
-        else if(fh->S_function == fixed_sphere)
-            fh->arr[i].S = fhmd_Sxyz_d(fh->grid.c[i], fh->box05, fh);               // Fixed MD/FH sphere
-        else
-            fh->arr[i].S = fh->S;                                                   // Constant S
-
-        for(int d = 0; d < DIM; d++)
+        for(int j = fh->N_shift[1]; j < (fh->N_md[1] + fh->N_shift[1]); j++)
         {
-            if(fh->S_function != constant_S)
+            for(int i = fh->N_shift[0]; i < (fh->N_md[0] + fh->N_shift[0]); i++)
             {
-                switch(d)
-                {
-                case 0:
-                    ASSIGN_DVEC(coords, fh->grid.n[i][0], fh->grid.c[i][1], fh->grid.c[i][2]);
-                    break;
-                case 1:
-                    ASSIGN_DVEC(coords, fh->grid.c[i][0], fh->grid.n[i][1], fh->grid.c[i][2]);
-                    break;
-                case 2:
-                    ASSIGN_DVEC(coords, fh->grid.c[i][0], fh->grid.c[i][1], fh->grid.n[i][2]);
-                    break;
-                }
+                ASSIGN_IND(ind, i, j, k);
 
                 if(fh->S_function == moving_sphere)
-                    fh->arr[i].Sf[d] = fhmd_Sxyz_d(coords, fh->protein_com, fh);    // MD/FH sphere follows protein
+                    fh->arr[C].S = fhmd_Sxyz_d(fh->grid.c[C], fh->protein_com, fh);         // MD/FH sphere follows protein
+                else if(fh->S_function == fixed_sphere)
+                    fh->arr[C].S = fhmd_Sxyz_d(fh->grid.c[C], fh->box05, fh);               // Fixed MD/FH sphere
                 else
-                    fh->arr[i].Sf[d] = fhmd_Sxyz_d(coords, fh->box05, fh);          // Fixed MD/FH sphere
-            }
-            else
-            {
-                    fh->arr[i].Sf[d] = fh->S;                                       // Constant S
+                    fh->arr[C].S = fh->S;                                                   // Constant S
+
+                for(int d = 0; d < DIM; d++)
+                {
+                    if(fh->S_function != constant_S)
+                    {
+                        switch(d)
+                        {
+                        case 0:
+                            ASSIGN_DVEC(coordl, fh->grid.n[C][0], fh->grid.c[C][1], fh->grid.c[C][2]);
+                            ASSIGN_DVEC(coordr, fh->grid.n[CR][0], fh->grid.c[C][1], fh->grid.c[C][2]);
+                            break;
+                        case 1:
+                            ASSIGN_DVEC(coordl, fh->grid.c[C][0], fh->grid.n[C][1], fh->grid.c[C][2]);
+                            ASSIGN_DVEC(coordr, fh->grid.c[C][0], fh->grid.n[CR][1], fh->grid.c[C][2]);
+                            break;
+                        case 2:
+                            ASSIGN_DVEC(coordl, fh->grid.c[C][0], fh->grid.c[C][1], fh->grid.n[C][2]);
+                            ASSIGN_DVEC(coordr, fh->grid.c[C][0], fh->grid.c[C][1], fh->grid.n[CR][2]);
+                            break;
+                        }
+
+                        if(fh->S_function == moving_sphere)
+                        {
+                            fh->arr[L].Sf[d] = fhmd_Sxyz_d(coordl, fh->protein_com, fh);    // MD/FH sphere follows protein
+                            fh->arr[R].Sf[d] = fhmd_Sxyz_d(coordr, fh->protein_com, fh);
+                        }
+                        else
+                        {
+                            fh->arr[L].Sf[d] = fhmd_Sxyz_d(coordl, fh->box05, fh);          // Fixed MD/FH sphere
+                            fh->arr[R].Sf[d] = fhmd_Sxyz_d(coordr, fh->box05, fh);
+                        }
+                    }
+                    else
+                    {
+                            fh->arr[L].Sf[d] = fh->S;                                       // Constant S
+                            fh->arr[R].Sf[d] = fh->S;
+                    }
+                }
+
             }
         }
     }
@@ -119,6 +139,9 @@ void FH_S(FHMD *fh)
             fh->arr[i].S = fhmd_Sxyz_d(fh->grid.c[i], fh->box05, fh);               // Fixed MD/FH sphere
         else
             fh->arr[i].S = fh->S;                                                   // Constant S
+
+        if(fh->grid.md[i] == FH_zone)
+            fh->arr[i].S = 1;                                                       // Pure FH zone
     }
 
     ivec ind;
@@ -136,6 +159,27 @@ void FH_S(FHMD *fh)
             }
         }
     }
+/*
+    for(int k = 0; k < NZ; k++)
+    {
+        for(int j = 0; j < NY; j++)
+        {
+            for(int i = 0; i < NX; i++)
+            {
+                ASSIGN_IND(ind, i, j, k);
+
+                if(fh->grid.md[C] == FH_zone)
+                {
+                    for(int d = 0; d < DIM; d++)
+                    {
+                        fh->arr[L].Sf[d] = 1;
+                        fh->arr[R].Sf[d] = 1;
+                    }
+                }
+            }
+        }
+    }
+*/
 }
 
 

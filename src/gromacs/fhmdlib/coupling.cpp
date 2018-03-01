@@ -30,7 +30,7 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms
 
         for(int d = 0; d < DIM; d++)
         {
-            fh->indv[n][d] = (int)(xn[d]/fh->box[d]*(double)(fh->N[d]));
+            fh->indv[n][d] = (int)(xn[d]/fh->box[d]*(double)(fh->N_md[d])) + fh->N_shift[d];
         }
 
         ind = I(fh->indv[n], fh->N);
@@ -117,71 +117,93 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
     ivec ind;
     dvec alpha_term;
 
-    for(int i = 0; i < fh->Ntot; i++)
+    for(int k = fh->N_shift[2]; k < (fh->N_md[2] + fh->N_shift[2]); k++)
     {
-        if(arr[i].ro_md <= 0) {
-            printf(MAKE_RED "\nFHMD: ERROR: Zero or NaN MD density in the cell #%d (ro_md = %g)\n" RESET_COLOR "\n", i, arr[i].ro_md);
-            exit(22);
-        }
-
-        arr[i].inv_ro = 1.0/arr[i].ro_md;
-
-        for(int d = 0; d < DIM; d++)
-            arr[i].u_md[d] = arr[i].uro_md[d]*arr[i].inv_ro;
-
-        if(fh->scheme == One_Way)
+        for(int j = fh->N_shift[1]; j < (fh->N_md[1] + fh->N_shift[1]); j++)
         {
-            arr[i].delta_ro = arr[i].ro_fh - arr[i].ro_md;
-            for(int d = 0; d < DIM; d++)
-                arr[i].beta_term[d] = fh->beta*(arr[i].u_fh[d]*arr[i].ro_fh - arr[i].uro_md[d]);
-        }
-        else if(fh->scheme == Two_Way)
-        {
-//            arr[i].delta_ro = arr[i].ron_prime;
-//            for(int d = 0; d < DIM; d++)
-//                arr[i].beta_term[d] = fh->beta*arr[i].mn_prime[d];
-            arr[i].delta_ro = arr[i].ro_fh - arr[i].ro_md;                                          // Layer n can work better than n+1/2
-            for(int d = 0; d < DIM; d++)
-                arr[i].beta_term[d] = fh->beta*(arr[i].u_fh[d]*arr[i].ro_fh - arr[i].uro_md[d]);    // Layer n can work better than n+1/2
-        }
-    }
-
-    for(int k = 0; k < NZ; k++)
-    {
-        for(int j = 0; j < NY; j++)
-        {
-            for(int i = 0; i < NX; i++)
+            for(int i = fh->N_shift[0]; i < (fh->N_md[0] + fh->N_shift[0]); i++)
             {
                 ASSIGN_IND(ind, i, j, k);
 
-                for(int d = 0; d < DIM; d++)
-                {
-                    arr[C].grad_ro[d] = fh->alpha*(arr[CR].delta_ro - arr[CL].delta_ro)/(0.5*(fh->grid.h[CL][d] + 2.0*fh->grid.h[C][d] + fh->grid.h[CR][d]));
+                if(arr[C].ro_md <= 0) {
+                    printf(MAKE_RED "\nFHMD: ERROR: Zero or NaN MD density in the cell %d-%d-%d (ro_md = %g)\n" RESET_COLOR "\n", i, j, k, arr[C].ro_md);
+                    exit(22);
+                }
 
-                    for(int du = 0; du < DIM; du++)
-                        arr[C].alpha_u_grad[du][d] = arr[C].grad_ro[d]*arr[C].S*(1 - arr[C].S)*arr[C].u_md[du];     // TODO: Fast but rough estimation!
+                arr[C].inv_ro = 1.0/arr[C].ro_md;
+
+                for(int d = 0; d < DIM; d++)
+                    arr[C].u_md[d] = arr[C].uro_md[d]*arr[C].inv_ro;
+
+                if(fh->scheme == One_Way)
+                {
+                    arr[C].delta_ro = arr[C].ro_fh - arr[C].ro_md;
+                    for(int d = 0; d < DIM; d++)
+                        arr[C].beta_term[d] = fh->beta*(arr[C].u_fh[d]*arr[C].ro_fh - arr[C].uro_md[d]);
+                }
+                else if(fh->scheme == Two_Way)
+                {
+//                  arr[C].delta_ro = arr[C].ron_prime;
+//                  for(int d = 0; d < DIM; d++)
+//                      arr[C].beta_term[d] = fh->beta*arr[C].mn_prime[d];
+                    arr[C].delta_ro = arr[C].ro_fh - arr[C].ro_md;                                          // Layer n may work better than n+1/2
+                    for(int d = 0; d < DIM; d++)
+                        arr[C].beta_term[d] = fh->beta*(arr[C].u_fh[d]*arr[C].ro_fh - arr[C].uro_md[d]);    // Layer n may work better than n+1/2
+
+                    if(fh->grid.md[C] == FH_zone) arr[C].delta_ro = 0;
                 }
             }
         }
     }
 
-    for(int k = 0; k < NZ; k++)
+    for(int k = fh->N_shift[2]; k < (fh->N_md[2] + fh->N_shift[2]); k++)  // TODO: This is for 2-way coupling only!
     {
-        for(int j = 0; j < NY; j++)
+        for(int j = fh->N_shift[1]; j < (fh->N_md[1] + fh->N_shift[1]); j++)
         {
-            for(int i = 0; i < NX; i++)
+            for(int i = fh->N_shift[0]; i < (fh->N_md[0] + fh->N_shift[0]); i++)
             {
                 ASSIGN_IND(ind, i, j, k);
+
+                for(int d = 0; d < DIM; d++)
+                {
+//                    if(fh->grid.md[C] == boundary)
+//                    {
+//                        if(arr[CL].delta_ro == 0)
+//                            arr[C].grad_ro[d] = fh->alpha*(arr[CR].delta_ro - arr[C].delta_ro)/(0.5*(fh->grid.h[CR][d] + fh->grid.h[C][d]));
+//                        else
+//                            arr[C].grad_ro[d] = fh->alpha*(arr[C].delta_ro - arr[CL].delta_ro)/(0.5*(fh->grid.h[CL][d] + fh->grid.h[C][d]));
+//                    }
+//                    else
+//                    {
+                        arr[Cm].grad_ro[d] = fh->alpha*(arr[CRm].delta_ro - arr[CLm].delta_ro)/(0.5*(fh->grid.h[CLm][d] + 2.0*fh->grid.h[Cm][d] + fh->grid.h[CRm][d]));
+//                    }
+
+                    for(int du = 0; du < DIM; du++)
+                        arr[Cm].alpha_u_grad[du][d] = arr[Cm].grad_ro[d]*arr[Cm].S*(1 - arr[Cm].S)*arr[Cm].u_md[du];    // TODO: Fast but rough estimation!
+                }
+            }
+        }
+    }
+
+    for(int k = fh->N_shift[2]; k < (fh->N_md[2] + fh->N_shift[2]); k++)  // TODO: This is for 2-way coupling only!
+    {
+        for(int j = fh->N_shift[1]; j < (fh->N_md[1] + fh->N_shift[1]); j++)
+        {
+            for(int i = fh->N_shift[0]; i < (fh->N_md[0] + fh->N_shift[0]); i++)
+            {
+                ASSIGN_IND(ind, i, j, k);
+
+                if((fh->scheme == Two_Way) && (fh->grid.md[C] == boundary)) continue;
 
                 for(int du = 0; du < DIM; du++)
                 {
                     for(int d = 0; d < DIM; d++)
                     {
-                        alpha_term[d] = (arr[CR].alpha_u_grad[du][d] - arr[CL].alpha_u_grad[du][d])
-                                /(0.5*(fh->grid.h[CL][d] + 2.0*fh->grid.h[C][d] + fh->grid.h[CR][d]));
+                        alpha_term[d] = (arr[CRm].alpha_u_grad[du][d] - arr[CLm].alpha_u_grad[du][d])
+                                /(0.5*(fh->grid.h[CLm][d] + 2.0*fh->grid.h[Cm][d] + fh->grid.h[CRm][d]));
                     }
 
-                    arr[C].alpha_term[du] = SUM(alpha_term);
+                    arr[Cm].alpha_term[du] = SUM(alpha_term);
                 }
             }
         }

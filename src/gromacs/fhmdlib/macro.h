@@ -18,6 +18,10 @@
 #define L0      I3b(-1,j,k,d,fh->N)     /* Point [-1][j][k] */
 #define L1      I3b( 0,j,k,d,fh->N)     /* Point [0][j][k] */
 
+#define Cm      Im(ind, fh->N, fh->N_md, fh->N_shift)           /* Point [i][j][k] inside inner (MD) grid */
+#define CLm     I3dm(i,j,k,-1,d,fh->N,fh->N_md,fh->N_shift)     /* Point [i-1][j][k] inside inner (MD) grid */
+#define CRm     I3dm(i,j,k,+1,d,fh->N,fh->N_md,fh->N_shift)     /* Point [i+1][j][k] inside inner (MD) grid */
+
 #define IR      I(indR, fh->N)
 #define IL      I(indL, fh->N)
 
@@ -68,6 +72,22 @@ static int I(const ivec ind, const ivec N)
 }
 
 
+static int Im(const ivec ind, const ivec N, const ivec Nm, const ivec shift)
+{
+    ivec indn;
+
+    copy_ivec(ind, indn);
+
+    for(int d = 0; d < DIM; d++)
+    {
+        if(indn[d] <   shift[d])          indn[d] += Nm[d];
+        if(indn[d] >= (shift[d] + Nm[d])) indn[d] -= Nm[d];
+    }
+
+    return indn[0] + indn[1]*N[0] + indn[2]*N[0]*N[1];
+}
+
+
 static int I3(const int i, const int j, const int k, const ivec N)
 {
     ivec ind;
@@ -96,6 +116,27 @@ static int I3d(const int i, const int j, const int k, const int dir, const int d
     }
 
     return I(ind, N);
+}
+
+
+static int I3dm(const int i, const int j, const int k, const int dir, const int d, const ivec N, const ivec Nm, const ivec shift)
+{
+    ivec ind;
+
+    switch(d)
+    {
+    case 0:
+        ASSIGN_IND(ind, i+dir, j, k);
+        break;
+    case 1:
+        ASSIGN_IND(ind, i, j+dir, k);
+        break;
+    case 2:
+        ASSIGN_IND(ind, i, j, k+dir);
+        break;
+    }
+
+    return Im(ind, N, Nm, shift);
 }
 
 
