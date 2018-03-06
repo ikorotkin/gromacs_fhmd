@@ -173,24 +173,6 @@ void FH_init(FHMD *fh, t_commrec *cr)
 }
 
 
-void rho_tilde_rescale(FHMD *fh)
-{
-    RHO_AVG = 0;
-
-    for(int i = 0; i < fh->Ntot; i++)
-    {
-        RHO_AVG += fh->arr[i].ro_fh;
-    }
-
-    double coef = avg_rho/RHO_AVG;
-
-    for(int i = 0; i < fh->Ntot; i++)
-    {
-        fh->arr[i].ro_fh *= coef;
-    }
-}
-
-
 void FH_predictor(FHMD *fh)
 {
     FH_arrays *a = fh->arr, *arr = fh->arr;
@@ -201,69 +183,8 @@ void FH_predictor(FHMD *fh)
     matrix TAUL, TAUR;
     double BP, BS;
 
-    //rho_tilde_rescale(fh);
-
     compute_random_stress(fh);
-/*
-    for(int k = 0; k < NZ; k++)
-    {
-        for(int j = 0; j < NY; j++)
-        {
-            for(int i = 0; i < NX; i++)
-            {
-                ASSIGN_IND(ind, i, j, k);
 
-                if(fh->grid.md[C] == boundary)
-                {
-                    for(int d = 0; d < DIM; d++)
-                    {
-                        if(a[L].uf[d][d] < 0)
-                            a[CL].ro_prime_b = 2.0*a[C].ro_prime - a[CR].ro_prime;
-                        else
-                            a[CL].ro_prime_b = -a[C].ro_prime;  // or 0?
-
-                        if(a[R].uf[d][d] > 0)
-                            a[CR].ro_prime_b = 2.0*a[C].ro_prime - a[CL].ro_prime;
-                        else
-                            a[CR].ro_prime_b = -a[C].ro_prime;  // or 0?
-
-                        for(int dim = 0; dim < DIM; dim++)
-                        {
-                            if(a[L].uf[d][d] < 0)
-                                a[CL].m_prime_b[dim] = 2.0*a[C].m_prime[dim] - a[CR].m_prime[dim];
-                            else
-                                a[CL].m_prime_b[dim] = -a[C].m_prime[dim];  // or 0?
-
-                            if(a[R].uf[d][d] > 0)
-                                a[CR].m_prime_b[dim] = 2.0*a[C].m_prime[dim] - a[CL].m_prime[dim];
-                            else
-                                a[CR].m_prime_b[dim] = -a[C].m_prime[dim];  // or 0?
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    for(int k = 0; k < NZ; k++)
-    {
-        for(int j = 0; j < NY; j++)
-        {
-            for(int i = 0; i < NX; i++)
-            {
-                ASSIGN_IND(ind, i, j, k);
-
-                if(fh->grid.md[C] != FH_zone)
-                {
-                    a[C].ro_prime_b = a[C].ro_prime;
-
-                    for(int dim = 0; dim < DIM; dim++)
-                        a[C].m_prime_b[dim] = a[C].m_prime[dim];
-                }
-            }
-        }
-    }
-*/
     for(int k = 0; k < NZ; k++)
     {
         for(int j = 0; j < NY; j++)
@@ -275,7 +196,7 @@ void FH_predictor(FHMD *fh)
                 for(int d = 0; d < DIM; d++)
                 {
                     // Mass flux for rho_prime
-                    FP[d] = (a[R].uf[d][d]*0.5*(a[CR].ro_prime + a[C].ro_prime) -           // _b was here
+                    FP[d] = (a[R].uf[d][d]*0.5*(a[CR].ro_prime + a[C].ro_prime) -
                              a[L].uf[d][d]*0.5*(a[CL].ro_prime + a[C].ro_prime))/HC;
 
                     // Source for rho_prime
@@ -324,7 +245,7 @@ void FH_predictor(FHMD *fh)
                     for(int d = 0; d < DIM; d++)
                     {
                         // Momentum flux for m_prime
-                        FP[d] = (a[R].uf[d][d]*0.5*(a[CR].m_prime[dim] + a[C].m_prime[dim]) -       // _b was here
+                        FP[d] = (a[R].uf[d][d]*0.5*(a[CR].m_prime[dim] + a[C].m_prime[dim]) -
                                  a[L].uf[d][d]*0.5*(a[CL].m_prime[dim] + a[C].m_prime[dim]))/HC;
 
                         // Momentum flux for m_star
@@ -387,47 +308,7 @@ void FH_corrector(FHMD *fh)
     double BP, BS, MDS;
 
     FH_char(fh);
-/*
-    for(int k = 0; k < NZ; k++)
-    {
-        for(int j = 0; j < NY; j++)
-        {
-            for(int i = 0; i < NX; i++)
-            {
-                ASSIGN_IND(ind, i, j, k);
 
-                if(fh->grid.md[C] == boundary)
-                {
-                    for(int d = 0; d < DIM; d++)
-                    {
-                        if(a[L].ufn[d][d] < 0)
-                            a[CL].ro_prime_b = 2.0*(2.0*a[C].ron_prime - a[C].ro_prime) - (2.0*a[CR].ron_prime - a[CR].ro_prime);
-                        else
-                            a[CL].ro_prime_b = -(2.0*a[C].ron_prime - a[C].ro_prime);  // or 0?
-
-                        if(a[R].ufn[d][d] > 0)
-                            a[CR].ro_prime_b = 2.0*(2.0*a[C].ron_prime - a[C].ro_prime) - (2.0*a[CL].ron_prime - a[CL].ro_prime);
-                        else
-                            a[CR].ro_prime_b = -(2.0*a[C].ron_prime - a[C].ro_prime);  // or 0?
-
-                        for(int dim = 0; dim < DIM; dim++)
-                        {
-                            if(a[L].ufn[d][d] < 0)
-                                a[CL].m_prime_b[dim] = 2.0*(2.0*a[C].mn_prime[dim] - a[C].m_prime[dim]) - (2.0*a[CR].mn_prime[dim] - a[CR].m_prime[dim]);
-                            else
-                                a[CL].m_prime_b[dim] = -(2.0*a[C].mn_prime[dim] - a[C].m_prime[dim]);  // or 0?
-
-                            if(a[R].ufn[d][d] > 0)
-                                a[CR].m_prime_b[dim] = 2.0*(2.0*a[C].mn_prime[dim] - a[C].m_prime[dim]) - (2.0*a[CL].mn_prime[dim] - a[CL].m_prime[dim]);
-                            else
-                                a[CR].m_prime_b[dim] = -(2.0*a[C].mn_prime[dim] - a[C].m_prime[dim]);  // or 0?
-                        }
-                    }
-                }
-            }
-        }
-    }
-*/
     for(int k = 0; k < NZ; k++)
     {
         for(int j = 0; j < NY; j++)
@@ -465,7 +346,7 @@ void FH_corrector(FHMD *fh)
                 for(int d = 0; d < DIM; d++)
                 {
                     // Mass flux for rho_prime
-                    FP[d] = (a[R].ufn[d][d]*0.5*(a[CR].ro_prime_b + a[C].ro_prime_b) -          // _b
+                    FP[d] = (a[R].ufn[d][d]*0.5*(a[CR].ro_prime_b + a[C].ro_prime_b) -
                              a[L].ufn[d][d]*0.5*(a[CL].ro_prime_b + a[C].ro_prime_b))/HC;
 
                     // Source for rho_prime
@@ -488,7 +369,7 @@ void FH_corrector(FHMD *fh)
                     for(int d = 0; d < DIM; d++)
                     {
                         // Momentum flux for m_prime
-                        FP[d] = (a[R].ufn[d][d]*0.5*(a[CR].m_prime_b[dim] + a[C].m_prime_b[dim]) -          // _b
+                        FP[d] = (a[R].ufn[d][d]*0.5*(a[CR].m_prime_b[dim] + a[C].m_prime_b[dim]) -
                                  a[L].ufn[d][d]*0.5*(a[CL].m_prime_b[dim] + a[C].m_prime_b[dim]))/HC;
 
                         QP[d] = fh->eps_mom*(a[CR].m_prime[dim] - 2.0*a[C].m_prime[dim] + a[CL].m_prime[dim])/DT;
