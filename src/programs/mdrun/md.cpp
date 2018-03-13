@@ -1545,6 +1545,14 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                  */
                 fhmd_update_coords(fplog, step, ir, mdatoms, state, f, fcd,
                                    ekind, M, upd, etrtPOSITION, cr, constr, &fhmd);
+
+                /*
+                 * FHMD: Calculate average velocity for Couette flow
+                 */
+                fhmd_couette_avg(&fhmd, state->x, state->v, mdatoms->homenr, cr);
+                if(MASTER(cr) && (fhmd.Noutput > 0))
+                    if(!(fhmd.step_MD % fhmd.Noutput))
+                        fhmd_couette_avg_write(&fhmd);
             }
 
             wallcycle_stop(wcycle, ewcUPDATE);

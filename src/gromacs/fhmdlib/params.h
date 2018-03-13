@@ -4,6 +4,7 @@
 #define FHMD_VERSION            1.00            /* FHMD model version */
 
 #define FHMD_MAX_LENGTH         1000.0          /* Maximum length scale [nm] -- for control purpose only */
+#define FHMD_COUETTE_LAYERS     20              /* Number of layers for Couette averaging */
 
 #define FHMD_kB                 0.00831451      /* Boltzmann constant [kJ/(mol*K)] */
 

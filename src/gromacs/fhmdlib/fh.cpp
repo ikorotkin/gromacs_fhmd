@@ -173,6 +173,20 @@ void FH_init(FHMD *fh, t_commrec *cr)
 }
 
 
+void calculate_avg(FHMD *fh)
+{
+    FH_arrays *a = fh->arr;
+    static int n = 1;
+
+    for(int i = 0; i < fh->Ntot; i++)
+    {
+        a[i].ux_avg = (a[i].ux_avg*(double)(n - 1) + a[i].u_fh[0])/((double)(n));
+    }
+
+    n++;
+}
+
+
 void FH_predictor(FHMD *fh)
 {
     FH_arrays *a = fh->arr, *arr = fh->arr;
@@ -183,7 +197,18 @@ void FH_predictor(FHMD *fh)
     matrix TAUL, TAUR;
     double BP, BS;
 
+    static int nc  = 0;
+    dvec couette;
+
+    const double couet_vel = 0.2;
+
+    ASSIGN_DVEC(couette, 100.0, 0, 0);
+
+    if(nc < 100) couette[0] = 0;
+    nc++;
+
     compute_random_stress(fh);
+    calculate_avg(fh);
 
     for(int k = 0; k < NZ; k++)
     {
@@ -274,8 +299,19 @@ void FH_predictor(FHMD *fh)
 
                     if(fh->grid.md[C] == FH_zone) a[C].mn_prime[dim] = 0;
 
-                    a[C].mn_star[dim]  = a[C].m_star[dim]  + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + a[C].uros_md[dim];
+                    a[C].mn_star[dim]  = a[C].m_star[dim]  + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + a[C].uros_md[dim]
+                                                           - couette[dim]*SC*(a[C].ux_avg - couet_vel*(fh->grid.c[C][YY]/fh->box[YY] - 0.5))*0.5*DT;
+
                     a[C].u_fh_n[dim]   = (a[C].mn_star[dim] + a[C].mn_prime[dim])/a[C].ro_fh_n;
+
+                    if((dim == XX) && (nc > 100))
+                    {
+                        if((j == 0) || (j == (NY-1)))
+                        {
+                            a[C].u_fh_n[dim]  = a[C].u_fh_n[dim] - a[C].ux_avg + couet_vel*(fh->grid.c[C][YY]/fh->box[YY] - 0.5);
+                            a[C].mn_star[dim] = a[C].u_fh_n[dim]*a[C].ro_fh_n - a[C].mn_prime[dim];
+                        }
+                    }
 
                     a[C].uropr_md[dim]     = a[C].uro_md_s[dim];
                     a[C].uro_md_prime[dim] = a[C].uro_md[dim];
@@ -306,6 +342,16 @@ void FH_corrector(FHMD *fh)
     dvec   FP, QP, FS, QS, PG, TAU, TAURAN;
     matrix TAUL, TAUR;
     double BP, BS, MDS;
+
+    static int nc  = 0;
+    dvec couette;
+
+    const double couet_vel = 0.2;
+
+    ASSIGN_DVEC(couette, 100.0, 0, 0);
+
+    if(nc < 100) couette[0] = 0;
+    nc++;
 
     FH_char(fh);
 
@@ -454,8 +500,19 @@ void FH_corrector(FHMD *fh)
                     MDS = (a[C].uro_md_s[dim] - a[C].uropr_md[dim] - a[C].uros_md[dim]);
 
                     // Momentum conservation
-                    a[C].m_star[dim] = a[C].mn_star[dim] + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + MDS;
+                    a[C].m_star[dim] = a[C].mn_star[dim] + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + MDS
+                                                         - couette[dim]*SC*(a[C].ux_avg - couet_vel*(fh->grid.c[C][YY]/fh->box[YY] - 0.5))*0.5*DT;
+
                     a[C].u_fh[dim]   = (a[C].m_star[dim] + a[C].mnn_prime[dim])/a[C].ro_fh;
+
+                    if((dim == XX) && (nc > 100))
+                    {
+                        if((j == 0) || (j == (NY-1)))
+                        {
+                            a[C].u_fh[dim]   = a[C].u_fh[dim] - a[C].ux_avg + couet_vel*(fh->grid.c[C][YY]/fh->box[YY] - 0.5);
+                            a[C].m_star[dim] = a[C].u_fh[dim]*a[C].ro_fh - a[C].mnn_prime[dim];
+                        }
+                    }
                 }
 
                 // Pressure

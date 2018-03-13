@@ -51,6 +51,8 @@ typedef struct FH_arrays                    /* FH/MD arrays */
 
     double      ro_md_s, ros_md, ropr_md;           /* sources of MD density */
     dvec        uro_md_s, uros_md, uropr_md;        /* sources of MD momentum */
+
+    double      ux_avg;
 } FH_arrays;
 
 
@@ -92,6 +94,7 @@ typedef struct FHMD
     int        *ind;            /* FH cell number for each atom */
     ivec       *indv;           /* 3-component FH cell number for each atom (vector) */
     double     *mpi_linear;     /* Linear array to summarise MDFH arrays */
+    dvec       *vel;            /* Real velocity of each particle (dx/dt) */
 
     FHMD_S      S_function;     /* S = const or S = S(x,y,z) - fixed or moving */
     int         scheme;         /* 0 - Pure MD, 1 - One-way coupling, 2 - Two-way coupling */
@@ -132,6 +135,12 @@ typedef struct FHMD
     double      dt_FH;          /* FH time step */
     double      std_rho;        /* Analytical STD of density */
     double      std_u;          /* Analytical STD of velocity */
+
+    /* Averaging (Couette flow) */
+    double      avg_vel[FHMD_COUETTE_LAYERS],     avg_vel_S[FHMD_COUETTE_LAYERS];
+    int         avg_n[FHMD_COUETTE_LAYERS],       avg_n_S[FHMD_COUETTE_LAYERS];
+    double      avg_vel_tot[FHMD_COUETTE_LAYERS], avg_vel_S_tot[FHMD_COUETTE_LAYERS];
+    int         avg_n_tot[FHMD_COUETTE_LAYERS];
 } FHMD;
 
 #endif /* FHMD_DATA_STRUCTURES_H_ */

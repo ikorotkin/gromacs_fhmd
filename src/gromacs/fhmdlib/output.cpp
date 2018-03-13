@@ -67,7 +67,37 @@ void fhmd_dump_all(FHMD *fh)
     write_dump(Sf[0],         "Sf_X");
     write_dump(Sf[1],         "Sf_Y");
     write_dump(Sf[2],         "Sf_Z");
+
+    write_dump(ux_avg,        "Ux_tilde_avg");
 #endif
+}
+
+
+void fhmd_couette_avg_write(FHMD *fh)
+{
+    FILE *fw;
+
+    const double eps = 1e-15;
+
+    if(fh->step_MD == 0)
+    {
+        fw = fopen("couette.txt", "w");
+    } else {
+        fw = fopen("couette.txt", "a");
+    }
+
+    fprintf(fw, "MD step = %d\n", fh->step_MD);
+    fprintf(fw, "layer\ty, nm\t<Ux>, nm/ps\t<Ux> (MD), nm/ps\tUx, nm/ps\tUx (MD), nm/ps\n");
+
+    for(int k = 0; k < FHMD_COUETTE_LAYERS; k++)
+    {
+        fprintf(fw, "%d\t%g\t%g\t%g\t%g\t%g\n", k, ((double)(k) + 0.5)/(double)(FHMD_COUETTE_LAYERS)*fh->box[YY],
+                fh->avg_vel_tot[k]/fh->avg_n_tot[k], fh->avg_vel_S_tot[k]/fh->avg_n_tot[k],
+                fh->avg_vel[k]/((double)(fh->avg_n[k]) + eps), fh->avg_vel_S[k]/((double)(fh->avg_n_S[k]) + eps));
+    }
+
+    fprintf(fw, "\n");
+    fclose(fw);
 }
 
 
@@ -106,7 +136,7 @@ void writeCons(FILE *fout, FHMD *fh, const char *line, char ch)
         for(int j = 0; j < NY; j++) {
             for(int i = 0; i < NX; i++) {
                 ASSIGN_IND(ind, i, j, k);
-                     if(ch == 'U') fprintf(fout, "%e ", fh->arr[C].u_fh[0]);
+                     if(ch == 'U') fprintf(fout, "%e ", fh->arr[C].ux_avg); // .u_fh[0]); !!!
                 else if(ch == 'V') fprintf(fout, "%e ", fh->arr[C].u_fh[1]);
                 else if(ch == 'W') fprintf(fout, "%e ", fh->arr[C].u_fh[2]);
                 else if(ch == 'R') fprintf(fout, "%e ", fh->arr[C].ro_fh);

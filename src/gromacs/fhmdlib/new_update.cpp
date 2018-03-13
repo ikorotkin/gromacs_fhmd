@@ -139,6 +139,8 @@ void fhmd_do_update_md(int start, int nrend,
 
                         xprime[n][d] = x[n][d] + (1 - S)*vn*(1 - exp(-gamma_u))/gamma_u*dt +
                                            (S*u_fh[d] + S*(1 - S)*grad_ro[d]*arr[ind].inv_ro)*(1 - exp(-gamma_x))/gamma_x*dt;
+
+                        fh->vel[n][d] = (xprime[n][d] - x[n][d])/dt;
                     }
                 }
             }
