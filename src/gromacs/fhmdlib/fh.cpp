@@ -181,6 +181,7 @@ void calculate_avg(FHMD *fh)
     for(int i = 0; i < fh->Ntot; i++)
     {
         a[i].ux_avg = (a[i].ux_avg*(double)(n - 1) + a[i].u_fh[0])/((double)(n));
+        a[i].mx_avg = (a[i].mx_avg*(double)(n - 1) + a[i].m_star[0])/((double)(n));
     }
 
     n++;
@@ -198,13 +199,19 @@ void FH_predictor(FHMD *fh)
     double BP, BS;
 
     static int nc  = 0;
-    dvec couette;
+    dvec couette, couette_prime;
 
-    const double couet_vel = 0.2;
+    const double couet_vel = 0.1;
 
-    ASSIGN_DVEC(couette, 100.0, 0, 0);
+    ASSIGN_DVEC(couette, 2000.0, 0, 0);
+    ASSIGN_DVEC(couette_prime, 2000.0, 0, 0);
 
-    if(nc < 100) couette[0] = 0;
+    if(nc < 100)
+    {
+        couette[0] = 0;
+        couette_prime[0] = 0;
+    }
+
     nc++;
 
     compute_random_stress(fh);
@@ -295,12 +302,19 @@ void FH_predictor(FHMD *fh)
                     a[C].uros_md[dim] = (a[C].uro_md_s[dim] - a[C].uropr_md[dim])*0.5;
 
                     // Momentum conservation
-                    a[C].mn_prime[dim] = a[C].m_prime[dim] + 0.5*DT*(-SUM(FP) + BP);
+                    if(SC < 1)
+                        a[C].mn_prime[dim] = a[C].m_prime[dim] + 0.5*DT*(-SUM(FP) + BP - couette_prime[dim]*pow(SC, 0.1)*a[C].m_prime[dim]/fh->FH_dens);
+                    else
+                        a[C].mn_prime[dim] = a[C].m_prime[dim] + 0.5*DT*(-SUM(FP) + BP - couette_prime[dim]*pow(0.5, 0.1)*a[C].m_prime[dim]/fh->FH_dens);
 
                     if(fh->grid.md[C] == FH_zone) a[C].mn_prime[dim] = 0;
 
+                    if(SC < 1)
                     a[C].mn_star[dim]  = a[C].m_star[dim]  + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + a[C].uros_md[dim]
-                                                           - couette[dim]*SC*(a[C].ux_avg - couet_vel*(fh->grid.c[C][YY]/fh->box[YY] - 0.5))*0.5*DT;
+                                                           - couette[dim]*pow(SC, 0.1)*(a[C].mx_avg/fh->FH_dens - couet_vel*(fh->grid.c[C][YY]/fh->box[YY] - 0.5))*0.5*DT;
+                    else
+                        a[C].mn_star[dim]  = a[C].m_star[dim]  + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + a[C].uros_md[dim]
+                                                               - couette[dim]*pow(0.5, 0.1)*(a[C].mx_avg/fh->FH_dens - couet_vel*(fh->grid.c[C][YY]/fh->box[YY] - 0.5))*0.5*DT;
 
                     a[C].u_fh_n[dim]   = (a[C].mn_star[dim] + a[C].mn_prime[dim])/a[C].ro_fh_n;
 
@@ -344,13 +358,19 @@ void FH_corrector(FHMD *fh)
     double BP, BS, MDS;
 
     static int nc  = 0;
-    dvec couette;
+    dvec couette, couette_prime;
 
-    const double couet_vel = 0.2;
+    const double couet_vel = 0.1;
 
-    ASSIGN_DVEC(couette, 100.0, 0, 0);
+    ASSIGN_DVEC(couette, 2000.0, 0, 0);
+    ASSIGN_DVEC(couette_prime, 2000.0, 0, 0);
 
-    if(nc < 100) couette[0] = 0;
+    if(nc < 100)
+    {
+        couette[0] = 0;
+        couette_prime[0] = 0;
+    }
+
     nc++;
 
     FH_char(fh);
@@ -427,8 +447,10 @@ void FH_corrector(FHMD *fh)
                     BP = -fh->beta*SC*(1 - SC)*(a[C].ro_fh*a[C].u_fh[dim] - a[C].uro_md_prime[dim]);                        // Layer n
 
                     // Momentum conservation
-                    a[C].mnn_prime[dim] = a[C].mn_prime[dim] + 0.5*DT*(-SUM(FP) + BP + SUM(QP));
-
+                    if(SC < 1)
+                        a[C].mnn_prime[dim] = a[C].mn_prime[dim] + 0.5*DT*(-SUM(FP) + BP + SUM(QP) - couette_prime[dim]*pow(SC, 0.1)*a[C].mn_prime[dim]/fh->FH_dens);
+                    else
+                        a[C].mnn_prime[dim] = a[C].mn_prime[dim] + 0.5*DT*(-SUM(FP) + BP + SUM(QP) - couette_prime[dim]*pow(0.5, 0.1)*a[C].mn_prime[dim]/fh->FH_dens);
                     if(fh->grid.md[C] == FH_zone) a[C].mnn_prime[dim] = 0;
                 }
             }
@@ -500,8 +522,12 @@ void FH_corrector(FHMD *fh)
                     MDS = (a[C].uro_md_s[dim] - a[C].uropr_md[dim] - a[C].uros_md[dim]);
 
                     // Momentum conservation
+                    if(SC < 1)
                     a[C].m_star[dim] = a[C].mn_star[dim] + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + MDS
-                                                         - couette[dim]*SC*(a[C].ux_avg - couet_vel*(fh->grid.c[C][YY]/fh->box[YY] - 0.5))*0.5*DT;
+                                                         - couette[dim]*pow(SC, 0.1)*(a[C].mx_avg/fh->FH_dens - couet_vel*(fh->grid.c[C][YY]/fh->box[YY] - 0.5))*0.5*DT;
+                    else
+                        a[C].m_star[dim] = a[C].mn_star[dim] + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + MDS
+                                                             - couette[dim]*pow(0.5, 0.1)*(a[C].mx_avg/fh->FH_dens - couet_vel*(fh->grid.c[C][YY]/fh->box[YY] - 0.5))*0.5*DT;
 
                     a[C].u_fh[dim]   = (a[C].m_star[dim] + a[C].mnn_prime[dim])/a[C].ro_fh;
 

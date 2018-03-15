@@ -69,6 +69,7 @@ void fhmd_dump_all(FHMD *fh)
     write_dump(Sf[2],         "Sf_Z");
 
     write_dump(ux_avg,        "Ux_tilde_avg");
+    write_dump(mx_avg,        "mx_star_avg");
 #endif
 }
 

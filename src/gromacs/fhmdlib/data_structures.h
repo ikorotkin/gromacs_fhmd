@@ -52,7 +52,7 @@ typedef struct FH_arrays                    /* FH/MD arrays */
     double      ro_md_s, ros_md, ropr_md;           /* sources of MD density */
     dvec        uro_md_s, uros_md, uropr_md;        /* sources of MD momentum */
 
-    double      ux_avg;
+    double      ux_avg, mx_avg;
 } FH_arrays;
 
 
