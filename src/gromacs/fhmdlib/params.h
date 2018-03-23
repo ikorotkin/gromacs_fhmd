@@ -7,6 +7,7 @@
 #define FHMD_COUETTE_LAYERS     20              /* Number of layers for Couette averaging */
 
 #define FHMD_kB                 0.00831451      /* Boltzmann constant [kJ/(mol*K)] */
+#define FHMD_PI                 3.1415926535898 /* PI constant */
 
 #define FHMD_DEBUG                              /* Write debug information */
 #define FHMD_TECPLOT                          /* Write data to Tecplot (create 'tecplot' dir manually) */

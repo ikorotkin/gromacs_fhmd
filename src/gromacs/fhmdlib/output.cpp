@@ -41,7 +41,7 @@ void fhmd_dump_all(FHMD *fh)
     write_dump(u_fh[2], "u_fh_Z");
 
 #ifdef FHMD_DEBUG
-    write_dump(f_fh[0],       "f_fh_X");
+/*    write_dump(f_fh[0],       "f_fh_X");
     write_dump(f_fh[1],       "f_fh_Y");
     write_dump(f_fh[2],       "f_fh_Z");
     write_dump(alpha_term[0], "alpha_term_X");
@@ -70,6 +70,7 @@ void fhmd_dump_all(FHMD *fh)
 
     write_dump(ux_avg,        "Ux_tilde_avg");
     write_dump(mx_avg,        "mx_star_avg");
+*/
 #endif
 }
 
@@ -95,6 +96,57 @@ void fhmd_couette_avg_write(FHMD *fh)
         fprintf(fw, "%d\t%g\t%g\t%g\t%g\t%g\n", k, ((double)(k) + 0.5)/(double)(FHMD_COUETTE_LAYERS)*fh->box[YY],
                 fh->avg_vel_tot[k]/fh->avg_n_tot[k], fh->avg_vel_S_tot[k]/fh->avg_n_tot[k],
                 fh->avg_vel[k]/((double)(fh->avg_n[k]) + eps), fh->avg_vel_S[k]/((double)(fh->avg_n_S[k]) + eps));
+    }
+
+    fprintf(fw, "\n");
+    fclose(fw);
+}
+
+
+void fhmd_acoustic_avg_write(FHMD *fh)
+{
+    FILE *fw;
+    double invn;
+
+    if(fh->step_MD == 0)
+    {
+        fw = fopen("acoustic.txt", "w");
+    } else {
+        fw = fopen("acoustic.txt", "a");
+    }
+
+    fprintf(fw, "MD step = %d\n", fh->step_MD);
+    fprintf(fw, "cell\tx, nm\t<U_tilde>, nm/ps\t<Rho_tilde>, nm/ps\t<m_star/rho>, nm/ps\n");
+
+    for(int i = 0; i < NX; i++)
+    {
+        fprintf(fw, "%d\t%g\t%g\t%g\t%g\n", i, ((double)(i) + 0.5)*fh->Lx/(double)(NX),
+                fh->arr[i].ux_avg, fh->arr[i].ro_avg, fh->arr[i].mx_avg);
+    }
+
+    fprintf(fw, "\n");
+    fclose(fw);
+
+    if(fh->step_MD == 0)
+    {
+        fw = fopen("acoustic_t.txt", "w");
+    } else {
+        fw = fopen("acoustic_t.txt", "a");
+    }
+
+    fprintf(fw, "MD step = %d\n", fh->step_MD);
+    fprintf(fw, "t, ps\tUx1\tUx2\tUx3\tUx4\tUx5\tRo1\tRo2\tRo3\tRo4\tRo5\n");
+
+    for(int j = 0; j < FHMD_COUETTE_LAYERS; j++)
+    {
+        if(fh->ac_n[j] > 0)
+            invn = 1.0/(double)(fh->ac_n[j]);
+        else
+            invn = 0;
+
+        fprintf(fw, "%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n", (double)(j)/(double)(FHMD_COUETTE_LAYERS)*556.61,
+                fh->ac_vel[0][j]*invn, fh->ac_vel[1][j]*invn, fh->ac_vel[2][j]*invn, fh->ac_vel[3][j]*invn, fh->ac_vel[4][j]*invn,
+                fh->ac_rho[0][j]*invn, fh->ac_rho[1][j]*invn, fh->ac_rho[2][j]*invn, fh->ac_rho[3][j]*invn, fh->ac_rho[4][j]*invn);
     }
 
     fprintf(fw, "\n");

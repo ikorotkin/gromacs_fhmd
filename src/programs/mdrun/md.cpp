@@ -1552,7 +1552,8 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 fhmd_couette_avg(&fhmd, state->x, state->v, mdatoms->homenr, cr);
                 if(MASTER(cr) && (fhmd.Noutput > 0))
                     if(!(fhmd.step_MD % fhmd.Noutput))
-                        fhmd_couette_avg_write(&fhmd);
+                        //fhmd_couette_avg_write(&fhmd);
+                        fhmd_acoustic_avg_write(&fhmd);
             }
 
             wallcycle_stop(wcycle, ewcUPDATE);
