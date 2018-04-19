@@ -24,32 +24,32 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
 
         /* Default values of FHMD parameters */
 
-        fh->scheme      = 1;
+        fh->scheme      = 2;
         fh->S           = 0;
         fh->R1          = 0.5;
-        fh->R2          = 0.9;
+        fh->R2          = 1;
         fh->Smin        = 0;
-        fh->Smax        = 0.99;
-        fh->alpha       = 100;
-        fh->beta        = 100;
+        fh->Smax        = 0.5;
+        fh->alpha       = 50;
+        fh->beta        = 20;
         fh->gamma_x     = 0;
-        fh->gamma_u     = 0;
-        fh->eps_rho     = 0;
-        fh->eps_mom     = 0;
+        fh->gamma_u     = 1;
+        fh->eps_rho     = 0.05;
+        fh->eps_mom     = 0.05;
         fh->S_berendsen = 1;
-        fh->N[0]        = 5;
-        fh->N[1]        = 5;
-        fh->N[2]        = 5;
-        fh->N_md[0]     = fh->N[0];
-        fh->N_md[1]     = fh->N[1];
-        fh->N_md[2]     = fh->N[2];
+        fh->N[0]        = 9;
+        fh->N[1]        = 9;
+        fh->N[2]        = 9;
+        fh->N_md[0]     = 5; //fh->N[0];
+        fh->N_md[1]     = 5; //fh->N[1];
+        fh->N_md[2]     = 5; //fh->N[2];
         fh->FH_EOS      = 1;
         fh->FH_step     = 10;
         fh->FH_equil    = 10000;
         fh->FH_dens     = 600;
         fh->FH_temp     = 298.15;
         fh->FH_blend    = 0.005;
-        fh->Noutput     = 10;
+        fh->Noutput     = 100;
 
         /* Read FHMD parameters */
 

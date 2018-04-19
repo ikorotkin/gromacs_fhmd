@@ -7,11 +7,11 @@
 
 #define FHMD_kB                 0.00831451      /* Boltzmann constant [kJ/(mol*K)] */
 
-#define FHMD_DEBUG                              /* Write debug information */
-#define FHMD_TECPLOT                          /* Write data to Tecplot (create 'tecplot' dir manually) */
+//#define FHMD_DEBUG                            /* Write debug information */
+//#define FHMD_TECPLOT                          /* Write data to Tecplot (create 'tecplot' dir manually) */
 //#define FHMD_DEBUG_GRID                       /* Print FH grid coordinates to the screen */
 #define FHMD_DEBUG_FH                           /* Print FH debug information */
-#define FHMD_DEBUG_COM                          /* Print protein COM coordinates */
+//#define FHMD_DEBUG_COM                        /* Print protein COM coordinates */
 //#define FHMD_DEBUG_INTERPOL                   /* Print interpolated values for debugging */
 
 enum FHMD_SCHEME {Pure_MD, One_Way, Two_Way};   /* List of schemes */

@@ -45,12 +45,12 @@ void fhmd_collect_statistics(FHMD *fh)
         st->davg_rho_fh  += arr[i].ro_fh;
 
         // Faster convergence but less accurate
-        st->davg_rho2_md += (arr[i].ro_md - fh->total_density)*(arr[i].ro_md - fh->total_density);
-        st->davg_rho2_fh += (arr[i].ro_fh - fh->FH_dens)*(arr[i].ro_fh - fh->FH_dens);
+        //st->davg_rho2_md += (arr[i].ro_md - fh->total_density)*(arr[i].ro_md - fh->total_density);
+        //st->davg_rho2_fh += (arr[i].ro_fh - fh->FH_dens)*(arr[i].ro_fh - fh->FH_dens);
 
         // More accurate estimation but much longer convergence
-        //st->davg_rho2_md += (arr[i].ro_md - st->avg_rho_md_cell[i]*invn)*(arr[i].ro_md - st->avg_rho_md_cell[i]*invn);
-        //st->davg_rho2_fh += (arr[i].ro_fh - st->avg_rho_fh_cell[i]*invn)*(arr[i].ro_fh - st->avg_rho_fh_cell[i]*invn);
+        st->davg_rho2_md += (arr[i].ro_md - st->avg_rho_md_cell[i]*invn)*(arr[i].ro_md - st->avg_rho_md_cell[i]*invn);
+        st->davg_rho2_fh += (arr[i].ro_fh - st->avg_rho_fh_cell[i]*invn)*(arr[i].ro_fh - st->avg_rho_fh_cell[i]*invn);
 
         for(int d = 0; d < DIM; d++)
         {
