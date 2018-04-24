@@ -4,7 +4,7 @@
 #include "gromacs/topology/mtop_util.h"     /* This is for gmx_mtop_atominfo_global() */
 
 
-double fhmd_Sxyz_r_sphere(const rvec x, const dvec c, FHMD *fh)
+double fhmd_Sxyz_r(const rvec x, const dvec c, FHMD *fh)
 {
     dvec xd;
 
@@ -26,7 +26,7 @@ double fhmd_Sxyz_r_sphere(const rvec x, const dvec c, FHMD *fh)
 }
 
 
-double fhmd_Sxyz_r(const rvec x, const dvec c, FHMD *fh)
+double fhmd_Sxyz_r_linear(const rvec x, const dvec c, FHMD *fh)
 {
     dvec xd;
 
