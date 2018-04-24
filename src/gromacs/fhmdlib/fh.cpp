@@ -1066,7 +1066,7 @@ void define_FH_grid(t_commrec *cr, FHMD *fh)
 
                 for(int d = 0; d < DIM; d++)
                 {
-                    if((ind[d] < fh->N_shift[d])  || (ind[d] >= (fh->N_md[d] + fh->N_shift[d])))
+                    if((ind[d] < fh->N_shift[d]) || (ind[d] >= (fh->N_md[d] + fh->N_shift[d])))
                         fh->grid.md[C] = FH_zone;       // cell C is outside MD/FH region
                 }
             }

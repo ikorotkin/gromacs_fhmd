@@ -156,7 +156,7 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
         }
     }
 
-    for(int k = fh->N_shift[2]; k < (fh->N_md[2] + fh->N_shift[2]); k++)  // TODO: This is for 2-way coupling only!
+    for(int k = fh->N_shift[2]; k < (fh->N_md[2] + fh->N_shift[2]); k++)
     {
         for(int j = fh->N_shift[1]; j < (fh->N_md[1] + fh->N_shift[1]); j++)
         {
@@ -166,17 +166,7 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
 
                 for(int d = 0; d < DIM; d++)
                 {
-//                    if(fh->grid.md[C] == boundary)
-//                    {
-//                        if(arr[CL].delta_ro == 0)
-//                            arr[C].grad_ro[d] = fh->alpha*(arr[CR].delta_ro - arr[C].delta_ro)/(0.5*(fh->grid.h[CR][d] + fh->grid.h[C][d]));
-//                        else
-//                            arr[C].grad_ro[d] = fh->alpha*(arr[C].delta_ro - arr[CL].delta_ro)/(0.5*(fh->grid.h[CL][d] + fh->grid.h[C][d]));
-//                    }
-//                    else
-//                    {
-                        arr[Cm].grad_ro[d] = fh->alpha*(arr[CRm].delta_ro - arr[CLm].delta_ro)/(0.5*(fh->grid.h[CLm][d] + 2.0*fh->grid.h[Cm][d] + fh->grid.h[CRm][d]));
-//                    }
+                    arr[Cm].grad_ro[d] = fh->alpha*(arr[CRm].delta_ro - arr[CLm].delta_ro)/(0.5*(fh->grid.h[CLm][d] + 2.0*fh->grid.h[Cm][d] + fh->grid.h[CRm][d]));
 
                     for(int du = 0; du < DIM; du++)
                         arr[Cm].alpha_u_grad[du][d] = arr[Cm].grad_ro[d]*arr[Cm].S*(1 - arr[Cm].S)*arr[Cm].u_md[du];    // TODO: Fast but rough estimation!
@@ -185,7 +175,7 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
         }
     }
 
-    for(int k = fh->N_shift[2]; k < (fh->N_md[2] + fh->N_shift[2]); k++)  // TODO: This is for 2-way coupling only!
+    for(int k = fh->N_shift[2]; k < (fh->N_md[2] + fh->N_shift[2]); k++)
     {
         for(int j = fh->N_shift[1]; j < (fh->N_md[1] + fh->N_shift[1]); j++)
         {
