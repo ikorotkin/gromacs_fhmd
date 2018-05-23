@@ -6,11 +6,14 @@
 #define FHMD_MAX_LENGTH         1000.0          /* Maximum length scale [nm] -- for control purpose only */
 
 #define FHMD_kB                 0.00831451      /* Boltzmann constant [kJ/(mol*K)] */
+#define FHMD_PI                 3.1415926535898 /* PI constant */
+
+#define FHMD_AVG_LAYERS         20
 
 //#define FHMD_DEBUG                            /* Write debug information */
 //#define FHMD_TECPLOT                          /* Write data to Tecplot (create 'tecplot' dir manually) */
 //#define FHMD_DEBUG_GRID                       /* Print FH grid coordinates to the screen */
-//#define FHMD_DEBUG_FH                         /* Print FH debug information */
+#define FHMD_DEBUG_FH                         /* Print FH debug information */
 //#define FHMD_DEBUG_COM                        /* Print protein COM coordinates */
 //#define FHMD_DEBUG_INTERPOL                   /* Print interpolated values for debugging */
 

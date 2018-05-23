@@ -71,6 +71,88 @@ void fhmd_dump_all(FHMD *fh)
 }
 
 
+void fhmd_acoustic_avg_write(FHMD *fh)
+{
+    FILE *fw;
+    double invn;
+
+    if(fh->step_MD == 0)
+    {
+        fw = fopen("acoustic.txt", "w");
+    } else {
+        fw = fopen("acoustic.txt", "a");
+    }
+
+    fprintf(fw, "MD step = %d\n", fh->step_MD);
+    fprintf(fw, "cell\tx, nm\t<U_tilde>, nm/ps\t<Rho_tilde>, nm/ps\t<m_star/rho>, nm/ps\n");
+
+    for(int i = 0; i < NX; i++)
+    {
+        fprintf(fw, "%d\t%g\t%g\t%g\t%g\n", i, ((double)(i) + 0.5)*fh->Lx/(double)(NX),
+                fh->arr[i].ux_avg, fh->arr[i].ro_avg, fh->arr[i].mx_avg);
+    }
+
+    fprintf(fw, "\n");
+    fclose(fw);
+
+    if(fh->step_MD == 0)
+    {
+        fw = fopen("acoustic_t.txt", "w");
+    } else {
+        fw = fopen("acoustic_t.txt", "a");
+    }
+
+    fprintf(fw, "MD step = %d\n", fh->step_MD);
+    fprintf(fw, "t, ps\tUx1\tUx2\tUx3\tUx4\tUx5\tRo1\tRo2\tRo3\tRo4\tRo5\n");
+
+    for(int j = 0; j < FHMD_AVG_LAYERS; j++)
+    {
+        if(fh->ac_n[j] > 0)
+            invn = 1.0/(double)(fh->ac_n[j]);
+        else
+            invn = 0;
+
+        fprintf(fw, "%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n", (double)(j)/(double)(FHMD_AVG_LAYERS)*fh->t0,
+                fh->ac_vel[0][j]*invn, fh->ac_vel[4][j]*invn, fh->ac_vel[8][j]*invn, fh->ac_vel[12][j]*invn, fh->ac_vel[10][j]*invn,
+                fh->ac_rho[0][j]*invn, fh->ac_rho[4][j]*invn, fh->ac_rho[8][j]*invn, fh->ac_rho[12][j]*invn, fh->ac_rho[10][j]*invn);
+    }
+
+    fprintf(fw, "\n");
+    fclose(fw);
+
+    if(fh->step_MD == 0)
+    {
+        fw = fopen("acoustic_MD.txt", "w");
+    } else {
+        fw = fopen("acoustic_MD.txt", "a");
+    }
+
+    //fprintf(fw, "t, ps\t<U_MD>\t<Rho_MD>\n");
+
+    int i = 10;
+    double ux_avg = 0;
+    double ro_avg = 0;
+    ivec ind;
+
+    for(int k = 0; k < NZ; k++)
+    {
+        for(int j = 0; j < NY; j++)
+        {
+            ASSIGN_IND(ind, i, j, k);
+
+            ux_avg += fh->arr[C].u_md[0];
+            ro_avg += fh->arr[C].ro_md;
+        }
+    }
+    ux_avg /= (double)(NY*NZ);
+    ro_avg /= (double)(NY*NZ);
+
+    fprintf(fw, "%g\t%g\t%g\n", (double)(fh->step_MD)*fh->dt_FH/10., ux_avg, ro_avg);
+
+    fclose(fw);
+}
+
+
 void writePoint(FILE *fout, FHMD *fh, const char *line, char ch)
 {
     int c = 0;

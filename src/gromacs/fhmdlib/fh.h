@@ -38,7 +38,7 @@ void swap_var(FHMD *fh);
 
 
 double MU, KAPPA, EOS_A, EOS_B, EOS_C, EOS_D, EOS_E, P_INIT, SOUND, VISC1, VISC2;
-double T;
+double T, T_local;
 int    STEP;
 double blend;
 

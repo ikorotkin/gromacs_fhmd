@@ -51,6 +51,8 @@ typedef struct FH_arrays                    /* FH/MD arrays */
 
     double      ro_md_s, ros_md, ropr_md;           /* sources of MD density */
     dvec        uro_md_s, uros_md, uropr_md;        /* sources of MD momentum */
+
+    double      ux_avg, mx_avg, ro_avg;
 } FH_arrays;
 
 
@@ -132,6 +134,12 @@ typedef struct FHMD
     double      dt_FH;          /* FH time step */
     double      std_rho;        /* Analytical STD of density */
     double      std_u;          /* Analytical STD of velocity */
+
+    /* Acoustic wave */
+    double      eps_ac, c_s, omega, kx, Lx, t0, lambda;
+    int         wave_lengths;
+    double      ac_vel[21][FHMD_AVG_LAYERS], ac_rho[21][FHMD_AVG_LAYERS];
+    int         ac_n[FHMD_AVG_LAYERS];
 } FHMD;
 
 #endif /* FHMD_DATA_STRUCTURES_H_ */
