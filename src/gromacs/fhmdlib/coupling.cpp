@@ -148,7 +148,7 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
 //                      arr[C].beta_term[d] = fh->beta*arr[C].mn_prime[d];
                     arr[C].delta_ro = arr[C].ro_fh - arr[C].ro_md;                                          // Layer n may work better than n+1/2
                     for(int d = 0; d < DIM; d++)
-                        arr[C].beta_term[d] = fh->beta*(arr[C].u_fh[d]*arr[C].ro_fh - arr[C].uro_md[d]);    // Layer n may work better than n+1/2
+                        arr[C].beta_term[d] = /*fh->beta*/(arr[C].u_fh[d]*arr[C].ro_fh - arr[C].uro_md[d]);    // Layer n may work better than n+1/2
 
                     if(fh->grid.md[C] == FH_zone) arr[C].delta_ro = 0;
                 }

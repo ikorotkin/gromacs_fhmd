@@ -132,7 +132,7 @@ void fhmd_do_update_md(int start, int nrend,
                         if(fabs(gamma_u) < g_eps) gamma_u = g_eps;
                         if(fabs(gamma_x) < g_eps) gamma_x = g_eps;
 
-                        vn = lg*v[n][d]*exp(-gamma_u) + ((1 - S)*f[n][d]*invmass[n] + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*arr[ind].inv_ro)
+                        vn = lg*v[n][d]*exp(-gamma_u) + ((1 - S)*f[n][d]*invmass[n] + (S*f_fh[d] + alpha_term[d] + fh->beta*(S*(1 - S) + S/*pow(S, 0.5)*/)*beta_term[d])*arr[ind].inv_ro)
                                  *(1 - exp(-gamma_u))/gamma_u*dt;
 
                         v[n][d] = vn;

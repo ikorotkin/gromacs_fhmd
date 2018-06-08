@@ -26,7 +26,7 @@ double fhmd_Sxyz_r(const rvec x, const dvec c, FHMD *fh)
 }
 
 
-double fhmd_Sxyz_r_lin(const rvec x, const dvec c, FHMD *fh)
+double fhmd_Sxyz_r_linear(const rvec x, const dvec c, FHMD *fh)
 {
     dvec xd;
 

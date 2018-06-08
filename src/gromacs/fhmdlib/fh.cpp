@@ -56,7 +56,7 @@ void FH_init(FHMD *fh, t_commrec *cr)
     // Acoustic wave parameters
     fh->wave_lengths = 1;
 
-    fh->eps_ac = 0.005;
+    fh->eps_ac = 0.002;
     fh->c_s    = SOUND;
     fh->Lx     = (double)(fh->N[0])*fh->box[0]/(double)(fh->N_md[0]);
     fh->lambda = fh->Lx/(double)(fh->wave_lengths);
@@ -247,7 +247,7 @@ void calculate_avg_acoustic_time(FHMD *fh)
     FH_arrays *a = fh->arr;
     ivec ind;
     double ux_avg[101], mx_avg[101], ro_avg[101];
-    static int n = 1;
+    static int n = 1, m = 1;
     int indx;
 
     for(int i = 0; i < NX; i++)
@@ -279,6 +279,7 @@ void calculate_avg_acoustic_time(FHMD *fh)
         ro_avg[i] /= (double)(NY*NZ);
     }
 
+    //if(m < 1000)   //if(n == 1)
     if(n == 1)
     {
         for(int j = 0; j < FHMD_AVG_LAYERS; j++)
@@ -290,20 +291,26 @@ void calculate_avg_acoustic_time(FHMD *fh)
             }
             fh->ac_n[j] = 1;
         }
+
+        m++;
     }
+//    else
+//    {
 
-    indx = T_local/fh->t0*(double)(FHMD_AVG_LAYERS);
-    if(indx >= FHMD_AVG_LAYERS) indx -= FHMD_AVG_LAYERS;
+        indx = T_local/fh->t0*(double)(FHMD_AVG_LAYERS);
+        if(indx >= FHMD_AVG_LAYERS) indx -= FHMD_AVG_LAYERS;
 
-    for(int i = 0; i < NX; i++)
-    {
-        fh->ac_vel[i][indx] += ux_avg[i];
-        fh->ac_rho[i][indx] += ro_avg[i];
-    }
+        for(int i = 0; i < NX; i++)
+        {
+            fh->ac_vel[i][indx] += ux_avg[i];
+            fh->ac_rho[i][indx] += ro_avg[i];
+        }
 
-    fh->ac_n[indx] += 1;
+        fh->ac_n[indx] += 1;
 
-    n++;
+        n++;
+
+//    }
 }
 
 
@@ -427,24 +434,26 @@ void FH_predictor(FHMD *fh)
     double BP, BS;
 
     static int nc  = 0;
-    dvec couette, couette_prime;
+//    dvec couette, couette_prime;
 
-    const double couet_vel = 0; //.01; //588;
+//    const double couet_vel = 0; //.01; //588;
+    const double gamma_m = 0; //2.0;
 
-    ASSIGN_DVEC(couette, 0, 0, 0);
-    ASSIGN_DVEC(couette_prime, 2000, 0, 0);
+//    ASSIGN_DVEC(couette, 0, 0, 0);
+//    ASSIGN_DVEC(couette_prime, 1.0, 1.0, 1.0);
 
-    double f_prime = 20;
-    double forcing = 0;
+    const double f_prime = 10;
+    const double forcing = 0;
+    const double s_power = 1.0;
     double invn;
-
+/*
     if(nc < 100)
     {
         couette[0] = 0;
         couette_prime[0] = 0;
         f_prime = 0;
     }
-
+*/
     nc++;
 
     //if(nc >= 1000)
@@ -475,18 +484,6 @@ void FH_predictor(FHMD *fh)
         fflush(stdout);
     }
 
-
-    //start_acoustic(fh);
-/*
-    if(T_local >= fh->t0)
-    {
-        T_local -= fh->t0;
-        calculate_avg_acoustic(fh);
-    }
-
-    calculate_avg_acoustic_time(fh);
-
-*/
     compute_random_stress(fh);
 
     //calculate_avg(fh);
@@ -511,11 +508,7 @@ void FH_predictor(FHMD *fh)
                             (SR*(1 - SR)*((a[CR].ro_fh - a[CR].ro_md) - (a[C].ro_fh - a[C].ro_md))/HR -
                              SL*(1 - SL)*((a[C].ro_fh - a[C].ro_md) - (a[CL].ro_fh - a[CL].ro_md))/HL)/HC;
 
-                    if(fh->grid.md[C] == boundary) QP[d] = 0;
-
-                    // Mass flux for rho_star
-                    //FS[d] = (SR*a[R].uf[d][d]*0.5*(a[CR].ro_star + a[C].ro_star) -
-                    //         SL*a[L].uf[d][d]*0.5*(a[CL].ro_star + a[C].ro_star))/HC;
+//                    if(fh->grid.md[C] == boundary) QP[d] = 0;
 
                     // Mass flux for rho_star
                     FS[d] = (SR*a[R].uf[d][d]*(a[R].rof[d] - 0.5*(a[CR].ro_prime + a[C].ro_prime)) -
@@ -526,7 +519,7 @@ void FH_predictor(FHMD *fh)
                             (SR*(1 - SR)*(a[CR].ro_prime - a[C].ro_prime)/HR -
                              SL*(1 - SL)*(a[C].ro_prime - a[CL].ro_prime)/HL)/HC;
 
-                    if(fh->grid.md[C] == boundary) QS[d] = 0;
+//                    if(fh->grid.md[C] == boundary) QS[d] = 0;
                 }
 
                 // MD source
@@ -534,9 +527,9 @@ void FH_predictor(FHMD *fh)
 
                 // Mass conservation
                 if(SC < 1)
-                    a[C].ron_prime = a[C].ro_prime + 0.5*DT*(-SUM(FP) + SUM(QP) - f_prime*pow(SC, 0.1)*a[C].ro_prime);
+                    a[C].ron_prime = a[C].ro_prime + 0.5*DT*(-SUM(FP) + SUM(QP) - f_prime*pow(SC, s_power)*a[C].ro_prime);
                 else
-                    a[C].ron_prime = a[C].ro_prime + 0.5*DT*(-SUM(FP) + SUM(QP) - f_prime*pow(0.5, 0.1)*a[C].ro_prime);
+                    a[C].ron_prime = a[C].ro_prime + 0.5*DT*(-SUM(FP) + SUM(QP) - f_prime*pow(fh->Smax, s_power)*a[C].ro_prime);
 
 //!!!                if(fh->grid.md[C] == FH_zone) a[C].ron_prime = 0;
 
@@ -550,13 +543,12 @@ void FH_predictor(FHMD *fh)
                     if(i == 1)  a[C].ron_prime = a[C].ron_prime - fh->ac_rho[i][indx]*invn + fh->FH_dens + fh->eps_ac*fh->FH_dens*cos(fh->omega*T_local - fh->kx*fh->grid.c[C][0]);
 //                    if(i == 7)  a[C].ron_prime = a[C].ron_prime - fh->ac_rho[i][indx]*invn + fh->FH_dens + fh->eps_ac*fh->FH_dens*cos(fh->omega*T_local - fh->kx*fh->grid.c[C][0]);
 //                    if(i == 13) a[C].ron_prime = a[C].ron_prime - fh->ac_rho[i][indx]*invn + fh->FH_dens + fh->eps_ac*fh->FH_dens*cos(fh->omega*T_local - fh->kx*fh->grid.c[C][0]);
-
-                    //                }
+//                }
 
                 if(SC < 1)
-                    a[C].ron_star  = a[C].ro_star  + 0.5*DT*(-SUM(FS) + SUM(QS) - forcing*pow(SC, 0.1)*(fh->eps_ac*fh->FH_dens*cos(fh->omega*T - fh->kx*fh->grid.c[C][0]))) + a[C].ros_md;
+                    a[C].ron_star  = a[C].ro_star  + 0.5*DT*(-SUM(FS) + SUM(QS) - forcing*pow(SC, s_power)*(fh->eps_ac*fh->FH_dens*cos(fh->omega*T - fh->kx*fh->grid.c[C][0]))) + a[C].ros_md;
                 else
-                    a[C].ron_star  = a[C].ro_star  + 0.5*DT*(-SUM(FS) + SUM(QS) - forcing*pow(0.5, 0.1)*(fh->eps_ac*fh->FH_dens*cos(fh->omega*T - fh->kx*fh->grid.c[C][0]))) + a[C].ros_md;
+                    a[C].ron_star  = a[C].ro_star  + 0.5*DT*(-SUM(FS) + SUM(QS) - forcing*pow(fh->Smax, s_power)*(fh->eps_ac*fh->FH_dens*cos(fh->omega*T - fh->kx*fh->grid.c[C][0]))) + a[C].ros_md;
 
                 a[C].ro_fh_n   = a[C].ron_star + a[C].ron_prime;
 
@@ -580,10 +572,6 @@ void FH_predictor(FHMD *fh)
                                  a[L].uf[d][d]*0.5*(a[CL].m_prime[dim] + a[C].m_prime[dim]))/HC;
 
                         // Momentum flux for m_star
-                        //FS[d] = (SR*a[R].uf[d][d]*0.5*(a[CR].m_star[dim] + a[C].m_star[dim]) -
-                        //         SL*a[L].uf[d][d]*0.5*(a[CL].m_star[dim] + a[C].m_star[dim]))/HC;
-
-                        // Momentum flux for m_star
                         FS[d] = (SR*a[R].uf[d][d]*(a[R].uf[dim][d]*a[R].rof[d] - 0.5*(a[CR].m_prime[dim] + a[C].m_prime[dim])) -
                                  SL*a[L].uf[d][d]*(a[L].uf[dim][d]*a[L].rof[d] - 0.5*(a[CL].m_prime[dim] + a[C].m_prime[dim])))/HC;
 
@@ -595,8 +583,18 @@ void FH_predictor(FHMD *fh)
                     }
 
                     // Beta-terms
-                    BP = -fh->beta*SC*(1 - SC)*(a[C].ro_fh*a[C].u_fh[dim] - a[C].uro_md[dim]);
-                    BS =  fh->beta*SC*(1 - SC)*a[C].m_prime[dim];
+                    //BP = -fh->beta*SC*(1 - SC)*(a[C].ro_fh*a[C].u_fh[dim] - a[C].uro_md[dim]);
+                    //BS =  fh->beta*SC*(1 - SC)*a[C].m_prime[dim];
+                    if(SC < 1)
+                    {
+                        BP = -fh->beta*SC*(1 - SC)*(a[C].ro_fh*a[C].u_fh[dim] - a[C].uro_md[dim]) - fh->beta*pow(SC, s_power)*a[C].m_prime[dim];
+                        BS =  fh->beta*(SC*(1 - SC) + pow(SC, s_power))*a[C].m_prime[dim];
+                    }
+                    else
+                    {
+                        BP = -fh->beta*SC*(1 - SC)*(a[C].ro_fh*a[C].u_fh[dim] - a[C].uro_md[dim]) - fh->beta*pow(fh->Smax, s_power)*a[C].m_prime[dim];
+                        BS =  fh->beta*(SC*(1 - SC) + pow(fh->Smax, s_power))*a[C].m_prime[dim];
+                    }
 
                     // FH force
                     a[C].f_fh[dim] = -PG[dim] + SUM(TAU) + SUM(TAURAN);
@@ -606,9 +604,9 @@ void FH_predictor(FHMD *fh)
 
                     // Momentum conservation
                     if(SC < 1)
-                        a[C].mn_prime[dim] = a[C].m_prime[dim] + 0.5*DT*(-SUM(FP) + BP - couette_prime[dim]*pow(SC, 0.1)*a[C].m_prime[dim]/fh->FH_dens);
+                        a[C].mn_prime[dim] = a[C].m_prime[dim] + 0.5*DT*(-SUM(FP) + BP - gamma_m*pow(SC, s_power)*a[C].m_prime[dim]);
                     else
-                        a[C].mn_prime[dim] = a[C].m_prime[dim] + 0.5*DT*(-SUM(FP) + BP - couette_prime[dim]*pow(0.5, 0.1)*a[C].m_prime[dim]/fh->FH_dens);
+                        a[C].mn_prime[dim] = a[C].m_prime[dim] + 0.5*DT*(-SUM(FP) + BP - gamma_m*pow(fh->Smax, s_power)*a[C].m_prime[dim]);
 
 //!!!                    if(fh->grid.md[C] == FH_zone) a[C].mn_prime[dim] = 0;
 
@@ -628,11 +626,11 @@ void FH_predictor(FHMD *fh)
                     }
 
                     if(SC < 1)
-                        a[C].mn_star[dim]  = a[C].m_star[dim]  + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + a[C].uros_md[dim]
-                                                           - couette[dim]*pow(SC, 0.1)*(a[C].mx_avg/fh->FH_dens - couet_vel)*0.5*DT;
+                        a[C].mn_star[dim]  = a[C].m_star[dim]  + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS + pow(SC, s_power)*gamma_m*a[C].m_prime[dim]) + a[C].uros_md[dim];
+                                                          // - couette[dim]*pow(SC, s_power)*(a[C].mx_avg/fh->FH_dens - couet_vel)*0.5*DT;
                     else
-                        a[C].mn_star[dim]  = a[C].m_star[dim]  + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + a[C].uros_md[dim]
-                                                               - couette[dim]*pow(0.5, 0.1)*(a[C].mx_avg/fh->FH_dens - couet_vel)*0.5*DT;
+                        a[C].mn_star[dim]  = a[C].m_star[dim]  + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS + pow(fh->Smax, s_power)*gamma_m*a[C].m_prime[dim]) + a[C].uros_md[dim];
+                                                              // - couette[dim]*pow(fh->Smax, s_power)*(a[C].mx_avg/fh->FH_dens - couet_vel)*0.5*DT;
 
 /*                    a[C].mn_prime[dim] = a[C].m_prime[dim] + 0.5*DT*(-SUM(FP) + BP);
 
@@ -674,24 +672,26 @@ void FH_corrector(FHMD *fh)
     //start_acoustic(fh);
 
     static int nc  = 0;
-    dvec couette, couette_prime;
+//    dvec couette, couette_prime;
     double invn;
 
-    const double couet_vel = 0; //.01; //588;
+//    const double couet_vel = 0; //.01; //588;
+    const double gamma_m = 0; //2.0;
 
-    ASSIGN_DVEC(couette, 0, 0, 0);
-    ASSIGN_DVEC(couette_prime, 2000, 0, 0);
+//    ASSIGN_DVEC(couette, 0, 0, 0);
+//    ASSIGN_DVEC(couette_prime, 1.0, 1.0, 1.0);
 
-    double f_prime = 20;
-    double forcing = 0;
-
+    const double f_prime = 10;
+    const double forcing = 0;
+    const double s_power = 1.0;
+/*
     if(nc < 100)
     {
         couette[0] = 0;
         couette_prime[0] = 0;
         f_prime = 0;
     }
-
+*/
     nc++;
 
     int indx = T_local/fh->t0*(double)(FHMD_AVG_LAYERS);
@@ -712,20 +712,20 @@ void FH_corrector(FHMD *fh)
             {
                 ASSIGN_IND(ind, i, j, k);
 
-                if(fh->grid.md[C] != FH_zone)
-                {
+                //if(fh->grid.md[C] != FH_zone)
+                //{
                     a[C].ro_prime_b = (2.0*a[C].ron_prime - a[C].ro_prime);
 
                     for(int dim = 0; dim < DIM; dim++)
                         a[C].m_prime_b[dim] = (2.0*a[C].mn_prime[dim] - a[C].m_prime[dim]);
-                }
+               /* }
                 else
                 {
                     a[C].ro_prime_b = 0;
 
                     for(int dim = 0; dim < DIM; dim++)
                         a[C].m_prime_b[dim] = 0;
-                }
+                }*/
             }
         }
     }
@@ -751,14 +751,14 @@ void FH_corrector(FHMD *fh)
 
                     QP[d] += fh->eps_rho*(a[CR].ro_prime - 2.0*a[C].ro_prime + a[CL].ro_prime)/DT;
 
-                    if(fh->grid.md[C] == boundary) QP[d] = 0;
+//                    if(fh->grid.md[C] == boundary) QP[d] = 0;
                 }
 
                 // Mass conservation
                 if(SC < 1)
-                    a[C].ronn_prime = a[C].ron_prime + 0.5*DT*(-SUM(FP) + SUM(QP) - f_prime*pow(SC, 0.1)*a[C].ron_prime);
+                    a[C].ronn_prime = a[C].ron_prime + 0.5*DT*(-SUM(FP) + SUM(QP) - f_prime*pow(SC, s_power)*a[C].ro_prime);
                 else
-                    a[C].ronn_prime = a[C].ron_prime + 0.5*DT*(-SUM(FP) + SUM(QP) - f_prime*pow(0.5, 0.1)*a[C].ron_prime);
+                    a[C].ronn_prime = a[C].ron_prime + 0.5*DT*(-SUM(FP) + SUM(QP) - f_prime*pow(fh->Smax, s_power)*a[C].ro_prime);
 
                 //if(fh->grid.md[C] == boundary)
                 //{
@@ -787,17 +787,21 @@ void FH_corrector(FHMD *fh)
 
                         QP[d] = fh->eps_mom*(a[CR].m_prime[dim] - 2.0*a[C].m_prime[dim] + a[CL].m_prime[dim])/DT;
 
-                        if(fh->grid.md[C] == boundary) QP[d] = 0;
+//                        if(fh->grid.md[C] == boundary) QP[d] = 0;
                     }
 
                     // Beta-term for m_prime
-                    BP = -fh->beta*SC*(1 - SC)*(a[C].ro_fh*a[C].u_fh[dim] - a[C].uro_md_prime[dim]);                        // Layer n
+                    //BP = -fh->beta*SC*(1 - SC)*(a[C].ro_fh*a[C].u_fh[dim] - a[C].uro_md_prime[dim]);                        // Layer n
+                    if(SC < 1)
+                        BP = -fh->beta*SC*(1 - SC)*(a[C].ro_fh*a[C].u_fh[dim] - a[C].uro_md_prime[dim]) - fh->beta*pow(SC, s_power)*a[C].m_prime[dim];
+                    else
+                        BP = -fh->beta*SC*(1 - SC)*(a[C].ro_fh*a[C].u_fh[dim] - a[C].uro_md_prime[dim]) - fh->beta*pow(fh->Smax, s_power)*a[C].m_prime[dim];
 
                     // Momentum conservation
                     if(SC < 1)
-                        a[C].mnn_prime[dim] = a[C].mn_prime[dim] + 0.5*DT*(-SUM(FP) + BP + SUM(QP) - couette_prime[dim]*pow(SC, 0.1)*a[C].mn_prime[dim]/fh->FH_dens);
+                        a[C].mnn_prime[dim] = a[C].mn_prime[dim] + 0.5*DT*(-SUM(FP) + BP + SUM(QP) - gamma_m*pow(SC, s_power)*a[C].m_prime[dim]);
                     else
-                        a[C].mnn_prime[dim] = a[C].mn_prime[dim] + 0.5*DT*(-SUM(FP) + BP + SUM(QP) - couette_prime[dim]*pow(0.5, 0.1)*a[C].mn_prime[dim]/fh->FH_dens);
+                        a[C].mnn_prime[dim] = a[C].mn_prime[dim] + 0.5*DT*(-SUM(FP) + BP + SUM(QP) - gamma_m*pow(fh->Smax, s_power)*a[C].m_prime[dim]);
                     //a[C].mnn_prime[dim] = a[C].mn_prime[dim] + 0.5*DT*(-SUM(FP) + BP + SUM(QP));
 
 //!!!                    if(fh->grid.md[C] == FH_zone) a[C].mnn_prime[dim] = 0;
@@ -844,7 +848,7 @@ void FH_corrector(FHMD *fh)
                             (SR*(1 - SR)*(a[CR].ronn_prime - a[C].ronn_prime)/HR -
                              SL*(1 - SL)*(a[C].ronn_prime - a[CL].ronn_prime)/HL)/HC;
 
-                    if((fh->grid.md[C] == boundary) || (fh->grid.md[C] == FH_zone)) QS[d] = 0;
+//                    if((fh->grid.md[C] == boundary) || (fh->grid.md[C] == FH_zone)) QS[d] = 0;
                 }
 
                 // MD Source
@@ -852,9 +856,9 @@ void FH_corrector(FHMD *fh)
 
                 // Mass conservation
                 if(SC < 1)
-                    a[C].ro_star  = a[C].ron_star  + 0.5*DT*(-SUM(FS) + SUM(QS) - forcing*pow(SC, 0.1)*(fh->eps_ac*fh->FH_dens*cos(fh->omega*T - fh->kx*fh->grid.c[C][0]))) + MDS;
+                    a[C].ro_star  = a[C].ron_star  + 0.5*DT*(-SUM(FS) + SUM(QS) - forcing*pow(SC, s_power)*(fh->eps_ac*fh->FH_dens*cos(fh->omega*T - fh->kx*fh->grid.c[C][0]))) + MDS;
                 else
-                    a[C].ro_star  = a[C].ron_star  + 0.5*DT*(-SUM(FS) + SUM(QS) - forcing*pow(0.5, 0.1)*(fh->eps_ac*fh->FH_dens*cos(fh->omega*T - fh->kx*fh->grid.c[C][0]))) + MDS;
+                    a[C].ro_star  = a[C].ron_star  + 0.5*DT*(-SUM(FS) + SUM(QS) - forcing*pow(fh->Smax, s_power)*(fh->eps_ac*fh->FH_dens*cos(fh->omega*T - fh->kx*fh->grid.c[C][0]))) + MDS;
 
                 //if(fh->grid.md[C] == FH_zone)//////////////////////////
                 //if(i == 7) a[C].ro_star = a[C].ro_star - fh->ac_rho[i][indx]*invn + fh->FH_dens + fh->eps_ac*fh->FH_dens*cos(fh->omega*T_local - fh->kx*fh->grid.c[C][0]);
@@ -902,18 +906,22 @@ void FH_corrector(FHMD *fh)
                     }
 
                     // Beta-term
-                    BS = fh->beta*SC*(1 - SC)*a[C].mnn_prime[dim];
+                    //BS = fh->beta*SC*(1 - SC)*a[C].mnn_prime[dim];
+                    if(SC < 1)
+                        BS = fh->beta*(SC*(1 - SC) + pow(SC, s_power))*a[C].mnn_prime[dim];
+                    else
+                        BS = fh->beta*(SC*(1 - SC) + pow(fh->Smax, s_power))*a[C].mnn_prime[dim];
 
                     // MD Source
                     MDS = (a[C].uro_md_s[dim] - a[C].uropr_md[dim] - a[C].uros_md[dim]);
 
                     // Momentum conservation
                     if(SC < 1)
-                        a[C].m_star[dim] = a[C].mn_star[dim] + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + MDS
-                                                         - couette[dim]*pow(SC, 0.1)*(a[C].mx_avg/fh->FH_dens - couet_vel)*0.5*DT;
+                        a[C].m_star[dim] = a[C].mn_star[dim] + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS + pow(SC, s_power)*gamma_m*a[C].mnn_prime[dim]) + MDS;
+                                                        // - couette[dim]*pow(SC, s_power)*(a[C].mx_avg/fh->FH_dens - couet_vel)*0.5*DT;
                     else
-                        a[C].m_star[dim] = a[C].mn_star[dim] + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + MDS
-                                                             - couette[dim]*pow(0.5, 0.1)*(a[C].mx_avg/fh->FH_dens - couet_vel)*0.5*DT;
+                        a[C].m_star[dim] = a[C].mn_star[dim] + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS + pow(fh->Smax, s_power)*gamma_m*a[C].mnn_prime[dim]) + MDS;
+                                                        //     - couette[dim]*pow(fh->Smax, s_power)*(a[C].mx_avg/fh->FH_dens - couet_vel)*0.5*DT;
                     //a[C].m_star[dim] = a[C].mn_star[dim] + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + MDS;
 
                     //if((dim == 0) && (fh->grid.md[C] == FH_zone))////////////////////////////
@@ -930,8 +938,6 @@ void FH_corrector(FHMD *fh)
 
                     a[C].u_fh[dim]   = (a[C].m_star[dim] + a[C].mnn_prime[dim])/a[C].ro_fh;
 
-//                    if((dim == 0) && (i == 0))////////////////////////////
-//                        a[C].u_fh[dim] = a[C].u_fh[dim] - fh->ac_vel[i][indx]*invn + fh->eps_ac*fh->c_s*cos(fh->omega*T_local - fh->kx*fh->grid.c[C][0]);
                 }
 
                 // Pressure
@@ -959,10 +965,6 @@ void FH_corrector(FHMD *fh)
     }
 
     //calculate_avg_acoustic_time(fh);
-
-
-
-
 
     T += fh->dt_FH;
     T_local += fh->dt_FH;
