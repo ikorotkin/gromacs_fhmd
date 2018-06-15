@@ -5,6 +5,7 @@
 #include "sfunction.h"
 #include "macro.h"
 
+#define EXP_ALPHA_TERM
 
 void fhmd_do_update_md(int start, int nrend,
                        double dt, int nstpcouple,
@@ -81,7 +82,8 @@ void fhmd_do_update_md(int start, int nrend,
                 trilinear_interpolation(u_fh,       xi, INTERPOLATE(u_fh));
                 trilinear_interpolation(alpha_term, xi, INTERPOLATE(alpha_term));
                 trilinear_interpolation(beta_term,  xi, INTERPOLATE(beta_term));
-                trilinear_interpolation(grad_ro,    xi, INTERPOLATE(grad_ro));
+                //trilinear_interpolation(grad_ro,    xi, INTERPOLATE(grad_ro));
+                trilinear_interpolation(grad_ro,    xi, INTERPOLATE(alpha_term_exp));
 
 #ifdef FHMD_DEBUG_INTERPOL
                 if(!(n % 10000) && !(fh->step_MD % 100))
@@ -126,19 +128,29 @@ void fhmd_do_update_md(int start, int nrend,
                     }
                     else if(fh->scheme == Two_Way)
                     {
+#ifndef EXP_ALPHA_TERM
                         gamma_u = fh->gamma_u*S*S*S*S*dt*(fh->stat.std_u_fh[d]*fh->stat.std_u_fh[d]/(fh->std_u*fh->std_u) - 1);
                         gamma_x = fh->gamma_x*S*S*S*S*dt*(fh->stat.std_rho_fh/fh->std_rho - 1);
 
                         if(fabs(gamma_u) < g_eps) gamma_u = g_eps;
                         if(fabs(gamma_x) < g_eps) gamma_x = g_eps;
 
-                        vn = lg*v[n][d]*exp(-gamma_u) + ((1 - S)*f[n][d]*invmass[n] + (S*f_fh[d] + alpha_term[d] + fh->beta*(S*(1 - S) + S/*pow(S, 0.5)*/)*beta_term[d])*arr[ind].inv_ro)
+                        vn = lg*v[n][d]*exp(-gamma_u) + ((1 - S)*f[n][d]*invmass[n] +
+                                  (S*f_fh[d] + alpha_term[d] + fh->beta*(S*(1 - S) + S/*pow(S, 0.5)*/)*beta_term[d])*arr[ind].inv_ro)
                                  *(1 - exp(-gamma_u))/gamma_u*dt;
 
                         v[n][d] = vn;
 
                         xprime[n][d] = x[n][d] + (1 - S)*vn*(1 - exp(-gamma_u))/gamma_u*dt +
                                            (S*u_fh[d] + S*(1 - S)*grad_ro[d]*arr[ind].inv_ro)*(1 - exp(-gamma_x))/gamma_x*dt;
+#else
+                        vn = lg*v[n][d] + ((1 - S)*f[n][d]*invmass[n] +
+                                  (S*f_fh[d] + (S*(1 - S) + 0.1*S)*alpha_term[d] + (S*(1 - S) + 0.1*S)*beta_term[d])*arr[ind].inv_ro)*dt;
+
+                        v[n][d] = vn;
+
+                        xprime[n][d] = x[n][d] + (1 - S)*vn*dt + (S*u_fh[d] - (S*(1 - S) + 0.1*S)*grad_ro[d])*dt;
+#endif
                     }
                 }
             }

@@ -22,11 +22,12 @@ typedef struct FH_arrays                    /* FH/MD arrays */
     dvec        u_md, u_fh;                 /* velocities */
     dvec        uro_md;                     /* momentum */
     dvec        f_fh;                       /* FH force */
-    dvec        alpha_term;                 /* alpha term for du/dt equation */
+    dvec        alpha_term, alpha_term_exp; /* alpha term for du/dt equation */
     dvec        beta_term;                  /* beta term for du/dt equation */
 
     double      delta_ro;                   /* delta of MD and FH densities */
     dvec        grad_ro;                    /* grad of density */
+    //dvec        grad_alpha_term;            /* aplha term gradient */
     matrix      alpha_u_grad;               /* preliminary alpha-term [u-index][grad-index] */
 
     double      S;                          /* S parameter in the FH cell centres */
