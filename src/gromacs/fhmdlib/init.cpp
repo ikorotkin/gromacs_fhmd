@@ -32,8 +32,8 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
         fh->Smax        = 0.5;
         fh->alpha       = 50;
         fh->beta        = 20;
-        fh->gamma_x     = 0;
-        fh->gamma_u     = 1;
+        fh->alpha0      = 0.1;
+        fh->beta0       = 0.1;
         fh->eps_rho     = 0.05;
         fh->eps_mom     = 0.05;
         fh->S_berendsen = 1;
@@ -122,12 +122,12 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
 
         if(fh->scheme == Two_Way)
         {
-            printf("FHMD: MD dissipator: gamma_x = %g [ps^-1], gamma_u = %g [ps^-1]\n", fh->gamma_x, fh->gamma_u);
-            printf("FHMD: FH dissipator: eps_rho = %g [--], eps_mom = %g [--]\n", fh->eps_rho, fh->eps_mom);
-            fprintf(fw, "gamma_x = %g             ; Gamma_x parameter (MD density fluctuations dissipator), ps^-1\n", fh->gamma_x);
-            fprintf(fw, "gamma_u = %g             ; Gamma_u parameter (MD velocity fluctuations dissipator), ps^-1\n", fh->gamma_u);
-            fprintf(fw, "eps_rho = %g             ; Eps_rho parameter (FH density fluctuations dissipator)\n", fh->eps_rho);
-            fprintf(fw, "eps_mom = %g             ; Eps_mom parameter (FH momentum fluctuations dissipator)\n\n", fh->eps_mom);
+            printf("FHMD: alpha0 = %g [ps^-1], beta0 = %g [ps^-1]\n", fh->alpha0, fh->beta0);
+            //printf("FHMD: FH dissipator: eps_rho = %g [--], eps_mom = %g [--]\n", fh->eps_rho, fh->eps_mom);
+            fprintf(fw, "alpha0 = %g              ; Alpha0 parameter, ps^-1\n", fh->alpha0);
+            fprintf(fw, "beta0  = %g              ; Beta0 parameter, ps^-1\n", fh->beta0);
+            //fprintf(fw, "eps_rho = %g             ; Eps_rho parameter (FH density fluctuations dissipator)\n", fh->eps_rho);
+            //fprintf(fw, "eps_mom = %g             ; Eps_mom parameter (FH momentum fluctuations dissipator)\n\n", fh->eps_mom);
         }
 
         if(fh->S_berendsen >= 0)
@@ -312,13 +312,6 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
         {
             fh->arr[i].Sf[d] = 1;
         }
-    }
-
-    for(int i = 0; i < FHMD_COUETTE_LAYERS; i++)
-    {
-        fh->avg_vel_tot[i]   = 0;
-        fh->avg_vel_S_tot[i] = 0;
-        fh->avg_n_tot[i]     = 0;
     }
 
     if(MASTER(cr))

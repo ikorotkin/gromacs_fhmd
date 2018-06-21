@@ -147,12 +147,12 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
 //                  arr[C].delta_ro = arr[C].ron_prime;
 //                  for(int d = 0; d < DIM; d++)
 //                      arr[C].beta_term[d] = fh->beta*arr[C].mn_prime[d];
+
                     arr[C].delta_ro = arr[C].ro_fh - arr[C].ro_md;                                          // Layer n may work better than n+1/2
+
                     for(int d = 0; d < DIM; d++)
                     {
                         arr[C].beta_term[d] = fh->beta*(arr[C].u_fh[d]*arr[C].ro_fh - arr[C].uro_md[d]);    // Layer n may work better than n+1/2
-
-                        //arr[C].alpha_term_exp[d] = fh->alpha*(arr[C].S*(1 - arr[C].S) + arr[C].S)*arr[C].delta_ro*arr[C].inv_ro*fh->grid.h[C][d];
 
                         switch(d)
                         {
@@ -166,21 +166,23 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
                             ij = k;
                             break;
                         }
+
                         ij -= fh->N_shift[d];
-                        switch(ij)
+
+                        switch(ij)  // TODO: Works only for 5x5x5 MD region!
                         {
                         case 0:
                             arr[C].alpha_term_exp[d]  = -fh->alpha*arr[C].delta_ro*arr[C].inv_ro*fh->grid.h[C][d]*0.5;
                             arr[C].alpha_term_exp[d] += -fh->alpha*(arr[CR].ro_fh - arr[CR].ro_md)/arr[CR].ro_md*fh->grid.h[CR][d];
                             break;
                         case 1:
-                            arr[C].alpha_term_exp[d] = -fh->alpha*arr[C].delta_ro*arr[C].inv_ro*fh->grid.h[C][d]*0.5;
+                            arr[C].alpha_term_exp[d]  = -fh->alpha*arr[C].delta_ro*arr[C].inv_ro*fh->grid.h[C][d]*0.5;
                             break;
                         case 2:
-                            arr[C].alpha_term_exp[d] = 0;
+                            arr[C].alpha_term_exp[d]  = 0;
                             break;
                         case 3:
-                            arr[C].alpha_term_exp[d] = fh->alpha*arr[C].delta_ro*arr[C].inv_ro*fh->grid.h[C][d]*0.5;
+                            arr[C].alpha_term_exp[d]  = fh->alpha*arr[C].delta_ro*arr[C].inv_ro*fh->grid.h[C][d]*0.5;
                             break;
                         case 4:
                             arr[C].alpha_term_exp[d]  = fh->alpha*arr[C].delta_ro*arr[C].inv_ro*fh->grid.h[C][d]*0.5;
@@ -208,7 +210,6 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
                     arr[Cm].grad_ro[d] = fh->alpha*(arr[CRm].delta_ro - arr[CLm].delta_ro)/(0.5*(fh->grid.h[CLm][d] + 2.0*fh->grid.h[Cm][d] + fh->grid.h[CRm][d]));
 
                     for(int du = 0; du < DIM; du++)
-                        //arr[Cm].alpha_u_grad[du][d] = arr[Cm].grad_ro[d]*arr[Cm].S*(1 - arr[Cm].S)*arr[Cm].u_md[du];    // TODO: Fast but rough estimation!
                         arr[Cm].alpha_u_grad[du][d] = arr[Cm].alpha_term_exp[d]*arr[Cm].uro_md[du];
                 }
             }

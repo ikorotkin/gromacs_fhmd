@@ -68,120 +68,6 @@ void fhmd_dump_all(FHMD *fh)
     write_dump(Sf[1],         "Sf_Y");
     write_dump(Sf[2],         "Sf_Z");
 #endif
-
-    write_dump(ux_avg,        "Ux_tilde_avg");
-    write_dump(mx_avg,        "mx_star_avg");
-    write_dump(ro_avg,        "Ux_avg");
-}
-
-
-void fhmd_couette_avg_write(FHMD *fh)
-{
-    FILE *fw;
-
-    const double eps = 1e-15;
-
-    if(fh->step_MD == 0)
-    {
-        fw = fopen("couette.txt", "w");
-    } else {
-        fw = fopen("couette.txt", "a");
-    }
-
-    fprintf(fw, "MD step = %d\n", fh->step_MD);
-    fprintf(fw, "layer\ty, nm\t<Ux>, nm/ps\t<Ux> (MD), nm/ps\tUx, nm/ps\tUx (MD), nm/ps\n");
-
-    for(int k = 0; k < FHMD_COUETTE_LAYERS; k++)
-    {
-        fprintf(fw, "%d\t%g\t%g\t%g\t%g\t%g\n", k, ((double)(k) + 0.5)/(double)(FHMD_COUETTE_LAYERS)*fh->box[YY],
-                fh->avg_vel_tot[k]/fh->avg_n_tot[k], fh->avg_vel_S_tot[k]/fh->avg_n_tot[k],
-                fh->avg_vel[k]/((double)(fh->avg_n[k]) + eps), fh->avg_vel_S[k]/((double)(fh->avg_n_S[k]) + eps));
-    }
-
-    fprintf(fw, "\n");
-    fclose(fw);
-}
-
-
-void fhmd_acoustic_avg_write(FHMD *fh)
-{
-    FILE *fw;
-    double invn;
-
-    if(fh->step_MD == 0)
-    {
-        fw = fopen("acoustic.txt", "w");
-    } else {
-        fw = fopen("acoustic.txt", "a");
-    }
-
-    fprintf(fw, "MD step = %d\n", fh->step_MD);
-    fprintf(fw, "cell\tx, nm\t<U_tilde>, nm/ps\t<Rho_tilde>, nm/ps\t<m_star/rho>, nm/ps\n");
-
-    for(int i = 0; i < NX; i++)
-    {
-        fprintf(fw, "%d\t%g\t%g\t%g\t%g\n", i, ((double)(i) + 0.5)*fh->Lx/(double)(NX),
-                fh->arr[i].ux_avg, fh->arr[i].ro_avg, fh->arr[i].mx_avg);
-    }
-
-    fprintf(fw, "\n");
-    fclose(fw);
-
-    if(fh->step_MD == 0)
-    {
-        fw = fopen("acoustic_t.txt", "w");
-    } else {
-        fw = fopen("acoustic_t.txt", "a");
-    }
-
-    fprintf(fw, "MD step = %d\n", fh->step_MD);
-    fprintf(fw, "t, ps\tUx1\tUx2\tUx3\tUx4\tUx5\tRo1\tRo2\tRo3\tRo4\tRo5\n");
-
-    for(int j = 0; j < FHMD_AVG_LAYERS; j++)
-    {
-        if(fh->ac_n[j] > 0)
-            invn = 1.0/(double)(fh->ac_n[j]);
-        else
-            invn = 0;
-
-        fprintf(fw, "%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n", (double)(j)/(double)(FHMD_AVG_LAYERS)*fh->t0,
-                fh->ac_vel[0][j]*invn, fh->ac_vel[4][j]*invn, fh->ac_vel[8][j]*invn, fh->ac_vel[12][j]*invn, fh->ac_vel[10][j]*invn,
-                fh->ac_rho[0][j]*invn, fh->ac_rho[4][j]*invn, fh->ac_rho[8][j]*invn, fh->ac_rho[12][j]*invn, fh->ac_rho[10][j]*invn);
-    }
-
-    fprintf(fw, "\n");
-    fclose(fw);
-
-    if(fh->step_MD == 0)
-    {
-        fw = fopen("acoustic_MD.txt", "w");
-    } else {
-        fw = fopen("acoustic_MD.txt", "a");
-    }
-
-    //fprintf(fw, "t, ps\t<U_MD>\t<Rho_MD>\n");
-
-    int i = 10;
-    double ux_avg = 0;
-    double ro_avg = 0;
-    ivec ind;
-
-    for(int k = 0; k < NZ; k++)
-    {
-        for(int j = 0; j < NY; j++)
-        {
-            ASSIGN_IND(ind, i, j, k);
-
-            ux_avg += fh->arr[C].u_md[0];
-            ro_avg += fh->arr[C].ro_md;
-        }
-    }
-    ux_avg /= (double)(NY*NZ);
-    ro_avg /= (double)(NY*NZ);
-
-    fprintf(fw, "%g\t%g\t%g\n", (double)(fh->step_MD)*fh->dt_FH/10., ux_avg, ro_avg);
-
-    fclose(fw);
 }
 
 
@@ -222,7 +108,7 @@ void writeCons(FILE *fout, FHMD *fh, const char *line, char ch)
                 ASSIGN_IND(ind, i, j, k);
                      if(ch == 'U') fprintf(fout, "%e ", fh->arr[C].u_fh[0]);
                 else if(ch == 'V') fprintf(fout, "%e ", fh->arr[C].u_fh[1]);
-                else if(ch == 'W') fprintf(fout, "%e ", fh->arr[C].ux_avg); // u_fh[2]);
+                else if(ch == 'W') fprintf(fout, "%e ", fh->arr[C].u_fh[2]);
                 else if(ch == 'R') fprintf(fout, "%e ", fh->arr[C].ro_fh);
                 if(c++ == 10) {fprintf(fout, "\n"); c = 0;}
             }
