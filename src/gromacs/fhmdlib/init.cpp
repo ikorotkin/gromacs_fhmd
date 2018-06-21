@@ -264,10 +264,11 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
     fh->arr  = (FH_arrays*)calloc(fh->Ntot, sizeof(FH_arrays));
     fh->ind  = (int*)calloc(N_atoms, sizeof(int));
     fh->indv = (ivec*)calloc(N_atoms, sizeof(ivec));
+    fh->vel  = (dvec*)calloc(N_atoms, sizeof(dvec));
 
     fh->mpi_linear = (double*)malloc(8*fh->Ntot*sizeof(double));   // 8 components: ro_md, uro_md[3], ro_md_s, uro_md_s[3]
 
-    if(fh->arr == NULL || fh->ind == NULL || fh->indv == NULL || fh->mpi_linear == NULL)
+    if(fh->arr == NULL || fh->ind == NULL || fh->indv == NULL || fh->vel == NULL || fh->mpi_linear == NULL)
     {
         if(MASTER(cr)) printf(MAKE_RED "\nFHMD: ERROR: Out of memory (array allocator)\n" RESET_COLOR "\n");
         fflush(stdout);
@@ -311,6 +312,13 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
         {
             fh->arr[i].Sf[d] = 1;
         }
+    }
+
+    for(int i = 0; i < FHMD_COUETTE_LAYERS; i++)
+    {
+        fh->avg_vel_tot[i]   = 0;
+        fh->avg_vel_S_tot[i] = 0;
+        fh->avg_n_tot[i]     = 0;
     }
 
     if(MASTER(cr))

@@ -95,6 +95,7 @@ typedef struct FHMD
     int        *ind;            /* FH cell number for each atom */
     ivec       *indv;           /* 3-component FH cell number for each atom (vector) */
     double     *mpi_linear;     /* Linear array to summarise MDFH arrays */
+    dvec       *vel;            /* Real velocity of each particle (dx/dt) */
 
     FHMD_S      S_function;     /* S = const or S = S(x,y,z) - fixed or moving */
     int         scheme;         /* 0 - Pure MD, 1 - One-way coupling, 2 - Two-way coupling */
@@ -141,6 +142,12 @@ typedef struct FHMD
     int         wave_lengths;
     double      ac_vel[21][FHMD_AVG_LAYERS], ac_rho[21][FHMD_AVG_LAYERS];
     int         ac_n[FHMD_AVG_LAYERS];
+
+    /* Averaging (Couette flow) */
+    double      avg_vel[FHMD_COUETTE_LAYERS],     avg_vel_S[FHMD_COUETTE_LAYERS];
+    int         avg_n[FHMD_COUETTE_LAYERS],       avg_n_S[FHMD_COUETTE_LAYERS];
+    double      avg_vel_tot[FHMD_COUETTE_LAYERS], avg_vel_S_tot[FHMD_COUETTE_LAYERS];
+    int         avg_n_tot[FHMD_COUETTE_LAYERS];
 } FHMD;
 
 #endif /* FHMD_DATA_STRUCTURES_H_ */

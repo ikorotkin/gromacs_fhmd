@@ -1533,7 +1533,7 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                     if(!(fhmd.step_MD % fhmd.Noutput))
                     {
                         fhmd_dump_all(&fhmd);
-                        fhmd_acoustic_avg_write(&fhmd);
+                        //fhmd_acoustic_avg_write(&fhmd);
 #ifdef FHMD_TECPLOT
                         fhmd_write_tecplot_data(&fhmd, fhmd.step_MD/fhmd.FH_step, (double)(fhmd.step_MD/fhmd.FH_step)*fhmd.dt_FH);
 #endif
@@ -1549,6 +1549,14 @@ double gmx::do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                  */
                 fhmd_update_coords(fplog, step, ir, mdatoms, state, f, fcd,
                                    ekind, M, upd, etrtPOSITION, cr, constr, &fhmd);
+
+                /*
+                 * FHMD: Calculate average velocity for Couette flow
+                 */
+                fhmd_couette_avg(&fhmd, state->x, state->v, mdatoms->homenr, cr);
+                if(MASTER(cr) && (fhmd.Noutput > 0))
+                    if(!(fhmd.step_MD % fhmd.Noutput))
+                        fhmd_couette_avg_write(&fhmd);
             }
 
             wallcycle_stop(wcycle, ewcUPDATE);

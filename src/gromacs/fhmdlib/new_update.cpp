@@ -151,6 +151,18 @@ void fhmd_do_update_md(int start, int nrend,
 
                         xprime[n][d] = x[n][d] + (1 - S)*vn*dt + (S*u_fh[d] - (S*(1 - S) + 0.1*S)*grad_ro[d])*dt;
 #endif
+
+
+                                                if(d == YY)
+                                                {
+                                                    if(xprime[n][d] < 0)
+                                                        xprime[n][0] += 0.05*dt;
+                                                    if(xprime[n][d] >= fh->box[d])
+                                                        xprime[n][0] -= 0.05*dt;
+                                                }
+
+
+                        fh->vel[n][d] = (xprime[n][d] - x[n][d])/dt;
                     }
                 }
             }
