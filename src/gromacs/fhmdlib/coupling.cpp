@@ -144,7 +144,7 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
                 }
                 else if(fh->scheme == Two_Way)
                 {
-//                  arr[C].delta_ro = arr[C].ron_prime;
+//                  arr[C].delta_ro = arr[C].ron_prime;                                                     // Layer n may work better than n+1/2
 //                  for(int d = 0; d < DIM; d++)
 //                      arr[C].beta_term[d] = fh->beta*arr[C].mn_prime[d];
 
@@ -152,7 +152,8 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
 
                     for(int d = 0; d < DIM; d++)
                     {
-                        arr[C].beta_term[d] = fh->beta*(arr[C].u_fh[d]*arr[C].ro_fh - arr[C].uro_md[d]);    // Layer n may work better than n+1/2
+                        //arr[C].beta_term[d] = fh->beta*(arr[C].u_fh[d]*arr[C].ro_fh - arr[C].uro_md[d]);  // Layer n may work better than n+1/2
+                        arr[C].beta_term[d] = fh->beta*arr[C].m_prime[d];                                  // Layer n may work better than n+1/2
 
                         switch(d)
                         {

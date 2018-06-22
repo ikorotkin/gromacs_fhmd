@@ -30,8 +30,8 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
         fh->R2          = 1;
         fh->Smin        = 0;
         fh->Smax        = 0.5;
-        fh->alpha       = 50;
-        fh->beta        = 20;
+        fh->alpha       = 1;
+        fh->beta        = 1;
         fh->alpha0      = 0.1;
         fh->beta0       = 0.1;
         fh->eps_rho     = 0.05;
@@ -76,9 +76,9 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
 
         fprintf(fw, "S = %g                   ; Parameter S (-1 - fixed sphere, -2 - moving sphere)\n\n", fh->S);
         fprintf(fw, "R1   = %g              ; MD sphere radius for variable S, [0..1]\n", fh->R1);
-        fprintf(fw, "R2   = %g              ; FH sphere radius for variable S, [0..1]\n", fh->R2);
+        fprintf(fw, "R2   = %g                ; FH sphere radius for variable S, [0..1]\n", fh->R2);
         fprintf(fw, "Smin = %g                ; Minimum S for variable S\n", fh->Smin);
-        fprintf(fw, "Smax = %g             ; Maximum S for variable S\n\n", fh->Smax);
+        fprintf(fw, "Smax = %g              ; Maximum S for variable S\n\n", fh->Smax);
 
         switch(fh->scheme)
         {
@@ -116,16 +116,16 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
             }
         }
 
-        printf(MAKE_GREEN "FHMD: alpha = %g [nm^2/ps], beta = %g [ps^-1]\n", fh->alpha, fh->beta);
-        fprintf(fw, "alpha   = %g           ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps\n", fh->alpha);
-        fprintf(fw, "beta    = %g           ; Beta parameter for du/dt equation, ps^-1\n\n", fh->beta);
+        printf(MAKE_GREEN "FHMD: alpha = %g [ps^-1], beta = %g [ps^-1]\n", fh->alpha, fh->beta);
+        fprintf(fw, "alpha = %g               ; Alpha parameter for dx/dt and du/dt equations, ps^-1\n", fh->alpha);
+        fprintf(fw, "beta  = %g               ; Beta parameter for du/dt equation, ps^-1\n\n", fh->beta);
 
         if(fh->scheme == Two_Way)
         {
             printf("FHMD: alpha0 = %g [ps^-1], beta0 = %g [ps^-1]\n", fh->alpha0, fh->beta0);
             //printf("FHMD: FH dissipator: eps_rho = %g [--], eps_mom = %g [--]\n", fh->eps_rho, fh->eps_mom);
-            fprintf(fw, "alpha0 = %g              ; Alpha0 parameter, ps^-1\n", fh->alpha0);
-            fprintf(fw, "beta0  = %g              ; Beta0 parameter, ps^-1\n", fh->beta0);
+            fprintf(fw, "alpha0 = %g            ; Alpha0 parameter, ps^-1\n", fh->alpha0);
+            fprintf(fw, "beta0  = %g            ; Beta0 parameter, ps^-1\n", fh->beta0);
             //fprintf(fw, "eps_rho = %g             ; Eps_rho parameter (FH density fluctuations dissipator)\n", fh->eps_rho);
             //fprintf(fw, "eps_mom = %g             ; Eps_mom parameter (FH momentum fluctuations dissipator)\n\n", fh->eps_mom);
         }
