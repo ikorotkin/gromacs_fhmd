@@ -34,7 +34,7 @@ void fhmd_do_update_md(int start, int nrend,
     double       gamma_u, gamma_x;
     int          nbr[8];
     dvec         xi;
-    dvec         f_fh, u_fh, alpha_term, beta_term, grad_ro;
+    dvec         f_fh, u_fh, alpha_term, beta_term, beta_term0, grad_ro;
 
     if (bNH || bPR)
     {
@@ -74,14 +74,20 @@ void fhmd_do_update_md(int start, int nrend,
                 trilinear_find_neighbours(x[n], n, xi, nbr, fh);
 
                 if(fh->scheme == Two_Way)
-                    trilinear_interpolation(f_fh,   xi, INTERPOLATE(f_fh));
+                {
+                    trilinear_interpolation(f_fh,       xi, INTERPOLATE(f_fh));
+                    trilinear_interpolation(grad_ro,    xi, INTERPOLATE(alpha_term_exp));
+                    trilinear_interpolation(beta_term0, xi, INTERPOLATE(beta_term0));
+                }
                 else
+                {
                     clear_dvec(f_fh);
+                    trilinear_interpolation(grad_ro,    xi, INTERPOLATE(grad_ro));
+                }
                 trilinear_interpolation(u_fh,       xi, INTERPOLATE(u_fh));
                 trilinear_interpolation(alpha_term, xi, INTERPOLATE(alpha_term));
                 trilinear_interpolation(beta_term,  xi, INTERPOLATE(beta_term));
-                //trilinear_interpolation(grad_ro,    xi, INTERPOLATE(grad_ro));
-                trilinear_interpolation(grad_ro,    xi, INTERPOLATE(alpha_term_exp));
+
 
 #ifdef FHMD_DEBUG_INTERPOL
                 if(!(n % 10000) && !(fh->step_MD % 100))
@@ -127,7 +133,8 @@ void fhmd_do_update_md(int start, int nrend,
                     else if(fh->scheme == Two_Way)
                     {
                         vn = lg*v[n][d] + ((1 - S)*f[n][d]*invmass[n] +
-                                  (S*f_fh[d] + (S*(1 - S) + fh->alpha0*S)*alpha_term[d] + (S*(1 - S) + fh->beta0*S)*beta_term[d])*arr[ind].inv_ro)*dt;
+//                                (S*f_fh[d] + (S*(1 - S) + fh->alpha0*S)*alpha_term[d] + (S*(1 - S) + fh->beta0*S)*beta_term[d])*arr[ind].inv_ro)*dt;
+                                (S*f_fh[d] + (S*(1 - S) + fh->alpha0*S)*alpha_term[d] + (S*(1 - S)*beta_term[d] + fh->beta0*S*beta_term0[d]))*arr[ind].inv_ro)*dt;
 
                         v[n][d] = vn;
 

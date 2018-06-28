@@ -23,7 +23,7 @@ typedef struct FH_arrays                    /* FH/MD arrays */
     dvec        uro_md;                     /* momentum */
     dvec        f_fh;                       /* FH force */
     dvec        alpha_term, alpha_term_exp; /* alpha term for du/dt equation */
-    dvec        beta_term;                  /* beta term for du/dt equation */
+    dvec        beta_term, beta_term0;      /* beta term for du/dt equation */
 
     double      delta_ro;                   /* delta of MD and FH densities */
     dvec        grad_ro;                    /* grad of density */

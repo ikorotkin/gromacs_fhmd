@@ -237,7 +237,7 @@ void FH_predictor(FHMD *fh)
     {
         update_statistics(fh);
 
-        printf("\r%8d %9.4f %9.5f %9.5f %9.5f %9.2f %9.4f %9.4f %9.4f %9.4f %9.2e %9.2e %9.2e %6.4f",
+        printf("\r%8d %9.4f %9.5f %9.5f %9.5f %9.2f %9.4f %9.4f %9.4f %9.4f %9.2e %9.2e %9.2e %6.4f\n",
                STEP, std_rho, std_u[0], std_u[1], std_u[2], sound*1000.0, T_INST/(double)(fh->Ntot), avg_T,
                avg_rho, avg_p/6.0221367e-1, avg_u[0], avg_u[1], avg_u[2], blend);
 
