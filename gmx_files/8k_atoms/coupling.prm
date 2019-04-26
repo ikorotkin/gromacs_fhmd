@@ -1,0 +1,41 @@
+; Hybrid Molecular Dynamics - 2-Way Coupling Parallel VERSION 1.00
+
+scheme = 1              ; 0 - Pure MD, 1 - One-way coupling, 2 - Two-way coupling
+
+S = 0.5                   ; Parameter S (-1 - fixed sphere, -2 - moving sphere)
+
+R1   = 0.5              ; MD sphere radius for variable S, [0..1]
+R2   = 1              ; FH sphere radius for variable S, [0..1]
+Smin = 0                ; Minimum S for variable S
+Smax = 0.5             ; Maximum S for variable S
+
+alpha   = 50           ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps
+beta    = 20           ; Beta parameter for du/dt equation, ps^-1
+
+gamma_x = 0             ; Gamma_x parameter (MD density fluctuations dissipator), ps^-1
+gamma_u = 1             ; Gamma_u parameter (MD velocity fluctuations dissipator), ps^-1
+eps_rho = 0.05             ; Eps_rho parameter (FH density fluctuations dissipator)
+eps_mom = 0.05             ; Eps_mom parameter (FH momentum fluctuations dissipator)
+
+S_berendsen = 1         ; If S_berendsen >= 0, Berendsen thermostat will work for S <= S_berendsen,
+                        ; otherwise factor (1-S^(-S_berendsen)) will be applied (local thermostat)
+
+Nx = 9                  ; Number of FH cells along X axis
+Ny = 9                  ; Number of FH cells along Y axis
+Nz = 9                  ; Number of FH cells along Z axis
+
+NxMD = 5                ; Number of small-scale MD-FH cells along X axis
+NyMD = 5                ; Number of small-scale MD-FH cells along Y axis
+NzMD = 5                ; Number of small-scale MD-FH cells along Z axis
+
+FH_EOS   = 0            ; EOS: 0 - Liquid Argon, 1 - SPC/E water
+FH_step  = 10           ; FH time step dt_FH = FH_step * dt_MD
+FH_equil = 0        ; Number of time steps for the FH model equilibration (for 1-way coupling)
+FH_dens  = 600          ; FH mean density
+FH_temp  = 298.15       ; FH mean temperature
+FH_blend = 0.005        ; FH Blending: -1 - dynamic, or define static blending parameter (0..1)
+
+Noutput  = 100           ; Write arrays to files every Noutput MD time steps (0 - do not write)
+
+; You may consider to use FH_dens = 599.997 since this is the total MD density of the box.
+; NB: Please use spaces before and after '=' in this file, e.g. 'S = 0' (not 'S=0').
