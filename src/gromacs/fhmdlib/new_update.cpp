@@ -37,6 +37,27 @@ void fhmd_do_update_md(int start, int nrend,
     dvec         f_fh, u_fh, alpha_term, beta_term, grad_ro;
     const double g_eps = 1e-10;
 
+
+    printf("\nStarting computation of beta coefficient for each atom in range from %d to %d\n", start, nrend);
+
+    double beta[nrend - start];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     if (bNH || bPR)
     {
         /* Update with coupling to extended ensembles, used for
