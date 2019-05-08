@@ -15,6 +15,8 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms
     {
         arr[i].ro_md   = 0;
         arr[i].ro_md_s = 0;
+        arr[i].ppm     = 0;
+
 
         for(int d = 0; d < DIM; d++)
         {
@@ -56,7 +58,18 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms
             arr[ind].uro_md[d]   += v[n][d]*mass[n];
             arr[ind].uro_md_s[d] += (1 - S)*v[n][d]*mass[n];
         }
-    }
+
+        // calculating ppm - impulse
+        rvec ppm_product;
+
+        for(int d = 0; d < DIM; d++)
+        {
+            ppm_product[d] = mass[n] * v[n][d] * v[n][d];
+        }
+
+
+        arr[ind].ppm += SUM(ppm_product);
+    } // for each atom loop
 
     /* Update statistics */
     for(int i = 0; i < fh->Ntot; i++)
@@ -89,10 +102,12 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
         fh->mpi_linear[i + fh->Ntot*5] = arr[i].uro_md_s[0];
         fh->mpi_linear[i + fh->Ntot*6] = arr[i].uro_md_s[1];
         fh->mpi_linear[i + fh->Ntot*7] = arr[i].uro_md_s[2];
+
+        fh->mpi_linear[i + fh->Ntot*8] = arr[i].ppm;
     }
 
     /* Broadcast linear array */
-    gmx_sumd(fh->Ntot*8, fh->mpi_linear, cr);
+    gmx_sumd(fh->Ntot*9, fh->mpi_linear, cr);
 
     /* Unpack linear array */
     for(int i = 0; i < fh->Ntot; i++)
@@ -106,6 +121,8 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
         arr[i].uro_md_s[0] = fh->mpi_linear[i + fh->Ntot*5];
         arr[i].uro_md_s[1] = fh->mpi_linear[i + fh->Ntot*6];
         arr[i].uro_md_s[2] = fh->mpi_linear[i + fh->Ntot*7];
+
+        arr[i].ppm = fh->mpi_linear[i + fh->Ntot*8];
     }
 }
 
@@ -139,7 +156,11 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
                 {
                     arr[C].delta_ro = arr[C].ro_fh - arr[C].ro_md;
                     for(int d = 0; d < DIM; d++)
-                        arr[C].beta_term[d] = fh->beta*(arr[C].u_fh[d]*arr[C].ro_fh - arr[C].uro_md[d]);
+                    {
+                        // (originally) arr[C].beta_term[d] = fh->beta*(arr[C].u_fh[d]*arr[C].ro_fh - arr[C].uro_md[d]);
+                        arr[C].beta_term[d] = (arr[C].u_fh[d]*arr[C].ro_fh - arr[C].uro_md[d]);
+
+                    }
                 }
                 else if(fh->scheme == Two_Way)
                 {
