@@ -18,3 +18,6 @@ dump_*txt
 *.save
 coupling_out.prm
 /Default/
+*.csv
+*.csv
+gmx_files/.ipynb_checkpoints/Graphs for Beta coef-checkpoint.ipynb

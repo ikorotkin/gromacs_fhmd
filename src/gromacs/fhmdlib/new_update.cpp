@@ -50,6 +50,8 @@ void fhmd_do_update_md(int start, int nrend,
     {
         double alpha = fh->alpha;
 
+        double ppm;
+
         double first_top[DIM];
         double first_top_v = 0;
 
@@ -88,10 +90,12 @@ void fhmd_do_update_md(int start, int nrend,
                     trilinear_interpolation(f_fh,   xi, INTERPOLATE(f_fh));
                 else
                     clear_dvec(f_fh);
+
                 trilinear_interpolation(u_fh,       xi, INTERPOLATE(u_fh));
                 trilinear_interpolation(alpha_term, xi, INTERPOLATE(alpha_term));
                 trilinear_interpolation(beta_term,  xi, INTERPOLATE(beta_term));
                 trilinear_interpolation(grad_ro,    xi, INTERPOLATE(grad_ro));
+
             }
 
 
@@ -101,7 +105,6 @@ void fhmd_do_update_md(int start, int nrend,
                 S = fhmd_Sxyz_r(x[n], fh->box05, fh);           // Fixed MD/FH sphere
 
             // calculations
-
             double ro_fh = arr[ind].ro_fh;
             double ro_md = arr[ind].ro_md;
             double ro_tilde = arr[ind].ro_fh;
@@ -156,15 +159,17 @@ void fhmd_do_update_md(int start, int nrend,
                 sum_uro_without_p[d] = 0;
                 for(int k = start; k < nrend; k++)
                 {
-                    if ((k == n) || (ind == fh->ind[k])) continue;
+                    if ((k == n) ) continue; // || (ind == fh->ind[k])) continue;
                     sum_uro_without_p[d] += v[k][d] * m * fh->grid.ivol[ind];
                 }
 
                 pr_v[d] = u_tilde[d]*ro_tilde - sum_uro_without_p[d];
 
-                second_bottom[d] = - 1/ppm * m*S*(1-S)*pr_v[d]/ro_md;
+                second_bottom[d] = - 1/ppm * v[n][d] *S*(1-S)*pr_v[d]/ro_md;
             }
             arr[ind].second_bottom += SUM(second_bottom);
+
+
         } // calculations of components
 
         printf("Finished calculations of terms");
@@ -233,9 +238,19 @@ void fhmd_do_update_md(int start, int nrend,
 
             beta[n-start] = (arr[ind].first_top + arr[ind].second_top)/(first_bottom_v + arr[ind].second_bottom);
 
+            ofstream ofs;
+            ofs.open("beta_component_first_bottom.csv", std::ofstream::out | std::ofstream::app);
+			ofs << first_bottom_v;
+            ofs << ",";
+            ofs.close();
+
         } // calculations of first_bottom_v and beta coef
     } // if (1)
 
+    ofstream ofs;
+    ofs.open("beta_component_first_bottom.csv", std::ofstream::out | std::ofstream::app);
+    ofs << "\n";
+    ofs.close();
 
     for(int ind = 0; ind < 8; ind++)
     {
@@ -247,17 +262,29 @@ void fhmd_do_update_md(int start, int nrend,
     }
 
 
-    ofstream ofs;
     ofs.open("beta_values.csv", std::ofstream::out | std::ofstream::app);
-    for(int i = 0; i < 5; i++)
+    for(int i = start; i < nrend; i++)
     {
-    	real b = beta[800 + i*1000];
+    	real b = beta[i * 500];
     	ofs << b;
     	ofs << ",";
+    	if(i == 10) break;
     }
     ofs << "\n";
     ofs.close();
 
+    ofs.open("beta_components.csv", std::ofstream::out | std::ofstream::app);
+
+    for(int ind = 0; ind < fh->Ntot; ind++)
+    {
+		ofs << arr[ind].first_top;
+		ofs << ",";
+		ofs << arr[ind].second_top;
+		ofs << ",";
+		ofs << arr[ind].second_bottom;
+		ofs << "\n";
+    }
+    ofs.close();
 
 
     if (bNH || bPR)
