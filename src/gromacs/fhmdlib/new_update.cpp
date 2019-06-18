@@ -45,6 +45,122 @@ void fhmd_do_update_md(int start, int nrend,
 
     double beta[nrend - start]; // the array [0, 7999] = beta[8000]
 
+    ofstream ofs;
+//    ofs.open("beta_component_first_bottom.csv", std::ofstream::out | std::ofstream::app);
+//    ofs << "\n";
+//    ofs.close();
+
+//    for(int ind = 0; ind < 8; ind++)
+//    {
+//    	printf("\nFor %d molecule\n", ind);
+//        printf("Components and beta %e\t", arr[ind].first_top);
+//        printf("%e\t", arr[ind].second_top);
+//        printf("%e\t", arr[ind].second_bottom);
+//        printf("%e\t", beta[ind]);
+//    }
+    int start_output = 0; //4720;
+
+    if(fh->step_MD == 0)
+	{
+    	int i;
+
+		ofs.open("log.txt", std::ofstream::out);
+		ofs << fh->step_MD;
+		ofs << "atoms ";
+		ofs << start << nrend;
+		ofs << "\n start to output on ";
+		ofs << start_output;
+		ofs << "step";
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("ro_values.csv", std::ofstream::out);
+		ofs << "Step";
+		for(i = start; i < fh->Ntot; i++)
+		{
+			ofs << ",";
+			ofs << i;
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("beta_values.csv", std::ofstream::out);
+		ofs << "Step";
+		for(i = start; i < nrend; i++)
+		{
+			ofs << ",";
+			ofs << i;
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("beta_component_first_top.csv", std::ofstream::out);
+		ofs << "step";
+		ofs << ",";
+		for(i = start; i < fh->Ntot; i++)
+		{
+			ofs << i;
+			ofs << ",";
+		}
+		ofs << "\b";
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("beta_component_second_top.csv", std::ofstream::out);
+		ofs << "step";
+		ofs << ",";
+		for(i = start; i < fh->Ntot; i++)
+		{
+			ofs << ",";
+			ofs << i;
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("beta_component_first_bottom.csv", std::ofstream::out);
+		ofs << "step";
+		for(i = start; i < nrend; i++)
+		{
+			ofs << ",";
+			ofs << i;
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("beta_component_second_bottom.csv", std::ofstream::out);
+		ofs << "step";
+		for(i = start; i < fh->Ntot; i++)
+		{
+			ofs << ",";
+			ofs << i;
+		}
+		ofs << "\n";
+		ofs.close();
+
+
+		ofs.open("atom_cell.csv", std::ofstream::out);
+		ofs << "step";
+		for(i = start; i < nrend; i++)
+		{
+			ofs << ",";
+			ofs << i;
+		}
+		ofs << "\n";
+		ofs.close();
+
+	}
+
+    if(fh->step_MD >= start_output)
+    {
+		ofs.open("beta_component_first_bottom.csv", std::ofstream::out | std::ofstream::app);
+		ofs << fh->step_MD;
+		ofs.close();
+
+		ofs.open("atom_cell.csv", std::ofstream::out | std::ofstream::app);
+		ofs << fh->step_MD;
+		ofs.close();
+    }
+
     // adding new logic
     if(1)
     {
@@ -81,6 +197,17 @@ void fhmd_do_update_md(int start, int nrend,
             w_dt     = invmass[n]*dt;
             ind      = fh->ind[n]; // index of cell containing atom n
             invro_dt = arr[ind].inv_ro*dt;
+
+
+
+    	    if(fh->step_MD >= start_output)
+    	    {
+        		ofs.open("atom_cell.csv", std::ofstream::out | std::ofstream::app);
+        		ofs << ",";
+        		ofs << ind;
+        		ofs.close();
+
+    	    }
 
             // interpolation of terms for cells
             {
@@ -238,68 +365,17 @@ void fhmd_do_update_md(int start, int nrend,
 
             beta[n-start] = (arr[ind].first_top + arr[ind].second_top)/(first_bottom_v + arr[ind].second_bottom);
 
-            if(fh->step_MD >= 4720)
+            if(fh->step_MD >= start_output)
             {
-				ofstream ofs;
 				ofs.open("beta_component_first_bottom.csv", std::ofstream::out | std::ofstream::app);
-				ofs << first_bottom_v;
 				ofs << ",";
+				ofs << first_bottom_v;
 				ofs.close();
             }
 
         } // calculations of first_bottom_v and beta coef
     } // if (1)
 
-    ofstream ofs;
-//    ofs.open("beta_component_first_bottom.csv", std::ofstream::out | std::ofstream::app);
-//    ofs << "\n";
-//    ofs.close();
-
-//    for(int ind = 0; ind < 8; ind++)
-//    {
-//    	printf("\nFor %d molecule\n", ind);
-//        printf("Components and beta %e\t", arr[ind].first_top);
-//        printf("%e\t", arr[ind].second_top);
-//        printf("%e\t", arr[ind].second_bottom);
-//        printf("%e\t", beta[ind]);
-//    }
-
-    if(fh->step_MD == 0)
-	{
-		ofs.open("log.txt", std::ofstream::out | std::ofstream::app);
-		ofs << fh->step_MD;
-		ofs << "atoms ";
-		ofs << start << nrend;
-		ofs << "\n";
-		ofs.close();
-
-		ofs.open("beta_values.csv", std::ofstream::out | std::ofstream::app);
-		ofs << "Step";
-		ofs << ",";
-		int i;
-		for(i = start; i < nrend; i++)
-		{
-			ofs << i;
-			ofs << ",";
-		}
-		ofs << "\n";
-		ofs.close();
-
-		ofs.open("beta_components.csv", std::ofstream::out | std::ofstream::app);
-
-		ofs << "Step";
-		ofs << ",";
-		ofs << "ind";
-		ofs << ",";
-		ofs << "first_top";
-		ofs << ",";
-		ofs << "second_top";
-		ofs << ",";
-		ofs << "second_bottom";
-		ofs << "\n";
-
-
-	}
 
 
 	ofs.open("log.txt", std::ofstream::out | std::ofstream::app);
@@ -307,35 +383,69 @@ void fhmd_do_update_md(int start, int nrend,
 	ofs << "\n";
 	ofs.close();
 
-    if(fh->step_MD >= 4720)
+    if(fh->step_MD >= start_output)
     {
-		ofs.open("beta_values.csv", std::ofstream::out | std::ofstream::app);
-		ofs << fh->step_MD;
-		ofs << ",";
 		int i;
+
+    	ofs.open("beta_values.csv", std::ofstream::out | std::ofstream::app);
+		ofs << fh->step_MD;
 		for(i = start; i < nrend; i++)
 		{
-			ofs << beta[i];
 			ofs << ",";
+			ofs << beta[i];
 		}
 		ofs << "\n";
 		ofs.close();
 
-		ofs.open("beta_components.csv", std::ofstream::out | std::ofstream::app);
-		for(int ind = 0; ind < fh->Ntot; ind++)
-		{
-			ofs << fh->step_MD;
-			ofs << ",";
-			ofs << ind;
-			ofs << ",";
-			ofs << arr[ind].first_top;
-			ofs << ",";
-			ofs << arr[ind].second_top;
-			ofs << ",";
-			ofs << arr[ind].second_bottom;
-			ofs << "\n";
-		}
+		ofs.open("beta_component_first_bottom.csv", std::ofstream::out | std::ofstream::app);
+		ofs << "\n";
 		ofs.close();
+
+		ofs.open("beta_component_first_top.csv", std::ofstream::out | std::ofstream::app);
+		ofs << fh->step_MD;
+		for(i = start; i < fh->Ntot; i++)
+		{
+			ofs << ",";
+			ofs << arr[i].first_top;
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("beta_component_second_top.csv", std::ofstream::out | std::ofstream::app);
+		ofs << fh->step_MD;
+		ofs << ",";
+		for(i = start; i < fh->Ntot; i++)
+		{
+			ofs << ",";
+			ofs << arr[i].second_top;
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("beta_component_second_bottom.csv", std::ofstream::out | std::ofstream::app);
+		ofs << fh->step_MD;
+		for(i = start; i < fh->Ntot; i++)
+		{
+			ofs << ",";
+			ofs << arr[i].second_bottom;
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("ro_values.csv", std::ofstream::out | std::ofstream::app);
+		ofs << fh->step_MD;
+		for(i = start; i < fh->Ntot; i++)
+		{
+			ofs << ",";
+			ofs << 1.0/arr[i].inv_ro;
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("atom_cell.csv", std::ofstream::out | std::ofstream::app);
+		ofs << "\n";
+		ofs.close();
+
     }
 
     if (bNH || bPR)

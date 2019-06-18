@@ -9,7 +9,7 @@ R2   = 1              ; FH sphere radius for variable S, [0..1]
 Smin = 0.1                ; Minimum S for variable S
 Smax = 0.9             ; Maximum S for variable S
 
-alpha   = 10           ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps
+alpha   = 50           ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps
 beta    = 20           ; Beta parameter for du/dt equation, ps^-1
 
 gamma_x = 0             ; Gamma_x parameter (MD density fluctuations dissipator), ps^-1

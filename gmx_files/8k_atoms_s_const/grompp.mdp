@@ -1,0 +1,43 @@
+include                  = 
+define                   = 
+
+integrator               = md
+
+dt                       = 0.01
+
+nsteps                   = 20000
+
+nstxout                  =
+nstvout                  =
+nstlog                   = 500
+nstcalcenergy            = 10
+nstenergy                = 10
+nstxout-compressed       = 10
+compressed-x-grps        = 
+energygrps               = 
+
+cutoff-scheme            = Verlet
+
+nstlist                  = 10
+ns-type                  = grid
+rlist                    = 1.0
+coulombtype              = cut-off
+rcoulomb                 = 1.0
+rvdw                     = 1.0
+
+tcoupl                   = berendsen
+nsttcouple               = 10
+tc-grps                  = System
+tau-t                    = 1.0
+ref-t                    = 300.0
+
+Pcoupl                   = no
+ref-p                    = 1
+tau-p                    = 0.1
+compressibility          = 4.5e-5
+
+gen-vel                  = no
+gen-temp                 = 300.0
+gen-seed                 = 2018
+
+constraints              = none

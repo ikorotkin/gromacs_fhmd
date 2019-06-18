@@ -7,7 +7,6 @@ debug
 dump_*txt
 *.edr
 *.log
-*.mdp
 *.top
 *.tpr
 *.xtc
