@@ -5,6 +5,9 @@
 #include "sfunction.h"
 #include "macro.h"
 
+#include <fstream> // to write out to files
+#include <iostream> // to write out to files
+using namespace std;
 
 void fhmd_do_update_md(int start, int nrend,
                        double dt, int nstpcouple,
@@ -36,6 +39,414 @@ void fhmd_do_update_md(int start, int nrend,
     dvec         xi;
     dvec         f_fh, u_fh, alpha_term, beta_term, grad_ro;
     const double g_eps = 1e-10;
+
+
+    // printf("\nStarting computation of beta coefficient for each atom in range from %d to %d\n", start, nrend);
+
+    double beta[nrend - start]; // the array [0, 7999] = beta[8000]
+
+    ofstream ofs;
+//    ofs.open("beta_component_first_bottom.csv", std::ofstream::out | std::ofstream::app);
+//    ofs << "\n";
+//    ofs.close();
+
+//    for(int ind = 0; ind < 8; ind++)
+//    {
+//    	printf("\nFor %d molecule\n", ind);
+//        printf("Components and beta %e\t", arr[ind].first_top);
+//        printf("%e\t", arr[ind].second_top);
+//        printf("%e\t", arr[ind].second_bottom);
+//        printf("%e\t", beta[ind]);
+//    }
+    int start_output = 0; //4720;
+
+    if(fh->step_MD == 0)
+	{
+    	int i;
+
+		ofs.open("log.txt", std::ofstream::out);
+		ofs << fh->step_MD;
+		ofs << "atoms ";
+		ofs << start << nrend;
+		ofs << "\n start to output on ";
+		ofs << start_output;
+		ofs << "step";
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("ro_values.csv", std::ofstream::out);
+		ofs << "Step";
+		for(i = start; i < fh->Ntot; i++)
+		{
+			ofs << ",";
+			ofs << i;
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("beta_values.csv", std::ofstream::out);
+		ofs << "Step";
+		for(i = start; i < nrend; i++)
+		{
+			ofs << ",";
+			ofs << i;
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("beta_component_first_top.csv", std::ofstream::out);
+		ofs << "step";
+		ofs << ",";
+		for(i = start; i < fh->Ntot; i++)
+		{
+			ofs << i;
+			ofs << ",";
+		}
+		ofs << "\b";
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("beta_component_second_top.csv", std::ofstream::out);
+		ofs << "step";
+		ofs << ",";
+		for(i = start; i < fh->Ntot; i++)
+		{
+			ofs << ",";
+			ofs << i;
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("beta_component_first_bottom.csv", std::ofstream::out);
+		ofs << "step";
+		for(i = start; i < nrend; i++)
+		{
+			ofs << ",";
+			ofs << i;
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("beta_component_second_bottom.csv", std::ofstream::out);
+		ofs << "step";
+		for(i = start; i < fh->Ntot; i++)
+		{
+			ofs << ",";
+			ofs << i;
+		}
+		ofs << "\n";
+		ofs.close();
+
+
+		ofs.open("atom_cell.csv", std::ofstream::out);
+		ofs << "step";
+		for(i = start; i < nrend; i++)
+		{
+			ofs << ",";
+			ofs << i;
+		}
+		ofs << "\n";
+		ofs.close();
+
+	}
+
+    if(fh->step_MD >= start_output)
+    {
+		ofs.open("beta_component_first_bottom.csv", std::ofstream::out | std::ofstream::app);
+		ofs << fh->step_MD;
+		ofs.close();
+
+		ofs.open("atom_cell.csv", std::ofstream::out | std::ofstream::app);
+		ofs << fh->step_MD;
+		ofs.close();
+    }
+
+    // adding new logic
+    if(1)
+    {
+        double alpha = fh->alpha;
+
+        double ppm;
+
+        double first_top[DIM];
+        double first_top_v = 0;
+
+        double second_top[DIM];
+        double second_top_v = 0;
+
+        double first_bottom[DIM];
+        double first_bottom_v = 0;
+
+        double second_bottom[DIM];
+        double second_bottom_v = 0;
+
+
+        // set statistics for cells to 0
+
+        for(int i = 0; i < fh->Ntot; i++) // Ntot == 729
+        {
+            arr[i].first_top =        0;
+            arr[i].second_top =       0;
+            arr[i].second_bottom =    0;
+        }
+
+        // begin to update the statistics
+        for (int n = start; n < nrend; n++)
+        {
+
+            w_dt     = invmass[n]*dt;
+            ind      = fh->ind[n]; // index of cell containing atom n
+            invro_dt = arr[ind].inv_ro*dt;
+
+
+
+    	    if(fh->step_MD >= start_output)
+    	    {
+        		ofs.open("atom_cell.csv", std::ofstream::out | std::ofstream::app);
+        		ofs << ",";
+        		ofs << ind;
+        		ofs.close();
+
+    	    }
+
+            // interpolation of terms for cells
+            {
+                trilinear_find_neighbours(x[n], n, xi, nbr, fh);
+
+                if(fh->scheme == Two_Way)
+                    trilinear_interpolation(f_fh,   xi, INTERPOLATE(f_fh));
+                else
+                    clear_dvec(f_fh);
+
+                trilinear_interpolation(u_fh,       xi, INTERPOLATE(u_fh));
+                trilinear_interpolation(alpha_term, xi, INTERPOLATE(alpha_term));
+                trilinear_interpolation(beta_term,  xi, INTERPOLATE(beta_term));
+                trilinear_interpolation(grad_ro,    xi, INTERPOLATE(grad_ro));
+
+            }
+
+
+            if(fh->S_function == moving_sphere)
+                S = fhmd_Sxyz_r(x[n], fh->protein_com, fh);     // MD/FH sphere follows protein
+            else if(fh->S_function == fixed_sphere)
+                S = fhmd_Sxyz_r(x[n], fh->box05, fh);           // Fixed MD/FH sphere
+
+            // calculations
+            double ro_fh = arr[ind].ro_fh;
+            double ro_md = arr[ind].ro_md;
+            double ro_tilde = arr[ind].ro_fh;
+            double m = 1/invmass[n];
+
+            double ppm = arr[ind].ppm;
+
+            rvec F_md;
+            rvec mv; // momentum
+            rvec u_tilde;
+            dvec grad_ro_ss_ro_alpha;
+
+            // compute cell specific parameters
+
+            for(d = 0; d < DIM; d++)
+            {
+                F_md[d] = f[n][d];
+                mv[d] = m*v[n][d]; // only v_md ?
+                u_tilde[d] = u_fh[d]; //  fh-velocity
+                grad_ro_ss_ro_alpha[d] = S*(1 - S)*arr[ind].grad_ro[d] * arr[ind].inv_ro;
+            }
+
+            // compute component terms values
+
+            // first top
+            for (d = 0; d < DIM; d++)
+            {
+                first_top[d] = - (1/ppm) * F_md[d] * (S*(u_tilde[d] - v[n][d]) + grad_ro_ss_ro_alpha[d]);
+            }
+
+            arr[ind].first_top += SUM(first_top);
+
+            // second top
+
+            for (d = 0; d < DIM; d++)
+            {
+                second_top[d] = - (1/ppm) * mv[d]/m * (S*F_md[d] - m * alpha_term[d] / ro_md);
+                // in mv what's v?
+            }
+
+            arr[ind].second_top += SUM(second_top);
+
+
+            double sum_uro_without_p[DIM];
+
+
+            rvec pr_v;
+
+            // second bottom
+            for (d = 0; d < DIM; d++)
+            {
+                sum_uro_without_p[d] = 0;
+                for(int k = start; k < nrend; k++)
+                {
+                    if ((k == n) ) continue; // || (ind == fh->ind[k])) continue;
+                    sum_uro_without_p[d] += v[k][d] * m * fh->grid.ivol[ind];
+                }
+
+                pr_v[d] = u_tilde[d]*ro_tilde - sum_uro_without_p[d];
+
+                second_bottom[d] = - 1/ppm * v[n][d] *S*(1-S)*pr_v[d]/ro_md;
+            }
+            arr[ind].second_bottom += SUM(second_bottom);
+
+
+        } // calculations of components
+
+        // printf("Finished calculations of terms");
+
+        for (int n = start; n < nrend; n++) // 0, 1, 2, ... 7999
+        {
+            w_dt     = invmass[n]*dt;
+            ind      = fh->ind[n]; // index of cell containing atom n
+            invro_dt = arr[ind].inv_ro*dt;
+
+            // interpolation of terms for cells
+            {
+                trilinear_find_neighbours(x[n], n, xi, nbr, fh);
+
+                if(fh->scheme == Two_Way)
+                    trilinear_interpolation(f_fh,   xi, INTERPOLATE(f_fh));
+                else
+                    clear_dvec(f_fh);
+                trilinear_interpolation(u_fh,       xi, INTERPOLATE(u_fh));
+                trilinear_interpolation(alpha_term, xi, INTERPOLATE(alpha_term));
+                trilinear_interpolation(beta_term,  xi, INTERPOLATE(beta_term));
+                trilinear_interpolation(grad_ro,    xi, INTERPOLATE(grad_ro));
+            }
+
+
+            if(fh->S_function == moving_sphere)
+                S = fhmd_Sxyz_r(x[n], fh->protein_com, fh);     // MD/FH sphere follows protein
+            else if(fh->S_function == fixed_sphere)
+                S = fhmd_Sxyz_r(x[n], fh->box05, fh);           // Fixed MD/FH sphere
+
+            // calculations
+
+            double ro_fh = arr[ind].ro_fh;
+            double ro_md = arr[ind].ro_md;
+            double ro_tilde = arr[ind].ro_fh;
+            double m = 1/invmass[n];
+
+            double ppm = arr[ind].ppm;
+
+            rvec F_md;
+            rvec mv; // momentum
+            rvec u_tilde;
+            dvec grad_ro_ss_ro_alpha;
+
+
+            for(d = 0; d < DIM; d++)
+            {
+                F_md[d] = f[n][d];
+                mv[d] = m*v[n][d];
+                u_tilde[d] = u_fh[d]; //  fh-velocity
+                grad_ro_ss_ro_alpha[d] = S*(1 - S)*arr[ind].grad_ro[d] * arr[ind].inv_ro;
+            }
+
+            // first bottom
+            for (d = 0; d < DIM; d++)
+            {
+                first_bottom[d] = S*(1 - S)*(m*fh->grid.ivol[ind])/ro_md;
+            }
+
+            first_bottom_v = SUM(first_bottom); //
+
+
+            // if(n % 2000 == 0) printf("\nCalculating beta for %d atom", n);
+
+            // final
+
+            beta[n-start] = (arr[ind].first_top + arr[ind].second_top)/(first_bottom_v + arr[ind].second_bottom);
+
+            if(fh->step_MD >= start_output)
+            {
+				ofs.open("beta_component_first_bottom.csv", std::ofstream::out | std::ofstream::app);
+				ofs << ",";
+				ofs << first_bottom_v;
+				ofs.close();
+            }
+
+        } // calculations of first_bottom_v and beta coef
+    } // if (1)
+
+
+
+	ofs.open("log.txt", std::ofstream::out | std::ofstream::app);
+	ofs << fh->step_MD;
+	ofs << "\n";
+	ofs.close();
+
+    if(fh->step_MD >= start_output)
+    {
+		int i;
+
+    	ofs.open("beta_values.csv", std::ofstream::out | std::ofstream::app);
+		ofs << fh->step_MD;
+		for(i = start; i < nrend; i++)
+		{
+			ofs << ",";
+			ofs << beta[i];
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("beta_component_first_bottom.csv", std::ofstream::out | std::ofstream::app);
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("beta_component_first_top.csv", std::ofstream::out | std::ofstream::app);
+		ofs << fh->step_MD;
+		for(i = start; i < fh->Ntot; i++)
+		{
+			ofs << ",";
+			ofs << arr[i].first_top;
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("beta_component_second_top.csv", std::ofstream::out | std::ofstream::app);
+		ofs << fh->step_MD;
+		ofs << ",";
+		for(i = start; i < fh->Ntot; i++)
+		{
+			ofs << ",";
+			ofs << arr[i].second_top;
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("beta_component_second_bottom.csv", std::ofstream::out | std::ofstream::app);
+		ofs << fh->step_MD;
+		for(i = start; i < fh->Ntot; i++)
+		{
+			ofs << ",";
+			ofs << arr[i].second_bottom;
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("ro_values.csv", std::ofstream::out | std::ofstream::app);
+		ofs << fh->step_MD;
+		for(i = start; i < fh->Ntot; i++)
+		{
+			ofs << ",";
+			ofs << 1.0/arr[i].inv_ro;
+		}
+		ofs << "\n";
+		ofs.close();
+
+		ofs.open("atom_cell.csv", std::ofstream::out | std::ofstream::app);
+		ofs << "\n";
+		ofs.close();
+
+    }
 
     if (bNH || bPR)
     {
@@ -120,7 +531,9 @@ void fhmd_do_update_md(int start, int nrend,
 
                     if(fh->scheme == One_Way)
                     {
-                        vn           = lg*v[n][d] + (1 - S)*f[n][d]*w_dt + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*invro_dt;
+                        // vn           = lg*v[n][d] + (1 - S)*f[n][d]*w_dt + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*invro_dt;
+                        vn           = lg*v[n][d] + (1 - S)*f[n][d]*w_dt + (S*f_fh[d] + alpha_term[d] + beta[n-start]*S*(1 - S)*beta_term[d])*invro_dt;
+
                         v[n][d]      = vn;
                         xprime[n][d] = x[n][d] + ((1 - S)*vn + S*u_fh[d])*dt + S*(1 - S)*grad_ro[d]*invro_dt;
                     }
@@ -139,6 +552,8 @@ void fhmd_do_update_md(int start, int nrend,
 
                         xprime[n][d] = x[n][d] + (1 - S)*vn*(1 - exp(-gamma_u))/gamma_u*dt +
                                            (S*u_fh[d] + S*(1 - S)*grad_ro[d]*arr[ind].inv_ro)*(1 - exp(-gamma_x))/gamma_x*dt;
+
+
                     }
                 }
             }

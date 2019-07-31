@@ -19,6 +19,7 @@ typedef struct FH_arrays                    /* FH/MD arrays */
 {
     double      ro_md, ro_fh;               /* densities */
     double      inv_ro;                     /* inverse density: 1/ro_md */
+    double      ppm;                        /* sum p^2/m for each cell */
     dvec        u_md, u_fh;                 /* velocities */
     dvec        uro_md;                     /* momentum */
     dvec        f_fh;                       /* FH force */
@@ -51,6 +52,13 @@ typedef struct FH_arrays                    /* FH/MD arrays */
 
     double      ro_md_s, ros_md, ropr_md;           /* sources of MD density */
     dvec        uro_md_s, uros_md, uropr_md;        /* sources of MD momentum */
+
+    /* new variables for cells */
+
+    double      first_top;
+    double      second_top;
+    double      second_bottom;
+
 } FH_arrays;
 
 

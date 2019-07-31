@@ -265,7 +265,7 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
     fh->ind  = (int*)calloc(N_atoms, sizeof(int));
     fh->indv = (ivec*)calloc(N_atoms, sizeof(ivec));
 
-    fh->mpi_linear = (double*)malloc(8*fh->Ntot*sizeof(double));   // 8 components: ro_md, uro_md[3], ro_md_s, uro_md_s[3]
+    fh->mpi_linear = (double*)malloc(9*fh->Ntot*sizeof(double));   // 9 components: ro_md, uro_md[3], ro_md_s, uro_md_s[3], ppm
 
     if(fh->arr == NULL || fh->ind == NULL || fh->indv == NULL || fh->mpi_linear == NULL)
     {

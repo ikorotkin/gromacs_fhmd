@@ -9,6 +9,14 @@ void trilinear_find_neighbours(const rvec x, const int n, dvec xi, int *nbr, FHM
     ivec il, ir;
     dvec shift;
 
+    for(int d = 0; d < DIM; d++)
+    {
+        if(fabs(x[d]) > FHMD_MAX_LENGTH - 800)
+        {
+            printf(MAKE_RED "\nFHMD: ERROR: Solution diverged. Atom number %d coordinates: (%g, %g, %g) nm\n" RESET_COLOR "\n", n, x[0], x[1], x[2]);
+        }
+    }
+
     PBC(xn, x, fh->box);
 
     /* Find 8 neighbours */

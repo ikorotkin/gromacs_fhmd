@@ -2,3 +2,21 @@
 .project
 .cproject
 .settings
+
+debug
+dump_*txt
+*.edr
+*.log
+*.top
+*.tpr
+*.xtc
+\#*\#
+*.xvg
+*.cpt
+*.gro
+*.save
+coupling_out.prm
+/Default/
+*.csv
+*.csv
+gmx_files/.ipynb_checkpoints/Graphs for Beta coef-checkpoint.ipynb
