@@ -1,0 +1,8 @@
+#include "oplsaa.ff/forcefield.itp"
+#include "oplsaa.ff/spce.itp"
+
+[ system ]
+SPC/E in water
+
+[ molecules ]
+SOL   30375
