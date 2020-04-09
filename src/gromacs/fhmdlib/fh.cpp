@@ -274,7 +274,9 @@ void FH_predictor(FHMD *fh)
 
                     if(fh->grid.md[C] == FH_zone) a[C].mn_prime[dim] = 0;
 
-                    a[C].mn_star[dim]  = a[C].m_star[dim]  + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + a[C].uros_md[dim];
+                    double gamma_lang = fh->gamma[(int)(SC*((double)(FHMD_LANGEVIN_LAYERS) - 1e-6))];
+
+                    a[C].mn_star[dim]  = a[C].m_star[dim] + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS - gamma_lang*a[C].uro_md_s[dim]) + a[C].uros_md[dim];
                     a[C].u_fh_n[dim]   = (a[C].mn_star[dim] + a[C].mn_prime[dim])/a[C].ro_fh_n;
 
                     a[C].uropr_md[dim]     = a[C].uro_md_s[dim];
@@ -453,8 +455,10 @@ void FH_corrector(FHMD *fh)
                     // MD Source
                     MDS = (a[C].uro_md_s[dim] - a[C].uropr_md[dim] - a[C].uros_md[dim]);
 
+                    double gamma_lang = fh->gamma[(int)(SC*((double)(FHMD_LANGEVIN_LAYERS) - 1e-6))];
+
                     // Momentum conservation
-                    a[C].m_star[dim] = a[C].mn_star[dim] + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS) + MDS;
+                    a[C].m_star[dim] = a[C].mn_star[dim] + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS - gamma_lang*a[C].uro_md_s[dim]) + MDS;
                     a[C].u_fh[dim]   = (a[C].m_star[dim] + a[C].mnn_prime[dim])/a[C].ro_fh;
                 }
 

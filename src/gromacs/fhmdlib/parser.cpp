@@ -33,6 +33,10 @@ int parse_prm(char const *fname, FHMD *fh)
             ok = assign_double_value(&fh->alpha, line, fprm);
         else if(!strcmp(line, "beta"))
             ok = assign_double_value(&fh->beta, line, fprm);
+        else if(!strcmp(line, "tau"))
+            ok = assign_double_value(&fh->tau, line, fprm);
+        else if(!strcmp(line, "T_S1"))
+            ok = assign_double_value(&fh->T_S_1, line, fprm);
         else if(!strcmp(line, "gamma_x"))
             ok = assign_double_value(&fh->gamma_x, line, fprm);
         else if(!strcmp(line, "gamma_u"))

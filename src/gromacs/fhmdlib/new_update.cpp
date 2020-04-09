@@ -126,19 +126,28 @@ void fhmd_do_update_md(int start, int nrend,
                     }
                     else if(fh->scheme == Two_Way)
                     {
-                        gamma_u = fh->gamma_u*S*S*S*S*dt*(fh->stat.std_u_fh[d]*fh->stat.std_u_fh[d]/(fh->std_u*fh->std_u) - 1);
-                        gamma_x = fh->gamma_x*S*S*S*S*dt*(fh->stat.std_rho_fh/fh->std_rho - 1);
+                        // gamma_u = fh->gamma_u*S*S*S*S*dt*(fh->stat.std_u_fh[d]*fh->stat.std_u_fh[d]/(fh->std_u*fh->std_u) - 1);
+                        // gamma_x = fh->gamma_x*S*S*S*S*dt*(fh->stat.std_rho_fh/fh->std_rho - 1);
 
-                        if(fabs(gamma_u) < g_eps) gamma_u = g_eps;
-                        if(fabs(gamma_x) < g_eps) gamma_x = g_eps;
+                        // if(fabs(gamma_u) < g_eps) gamma_u = g_eps;
+                        // if(fabs(gamma_x) < g_eps) gamma_x = g_eps;
 
-                        vn = lg*v[n][d]*exp(-gamma_u) + ((1 - S)*f[n][d]*invmass[n] + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*arr[ind].inv_ro)
-                                 *(1 - exp(-gamma_u))/gamma_u*dt;
+                        // vn = lg*v[n][d]*exp(-gamma_u) + ((1 - S)*f[n][d]*invmass[n] + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*arr[ind].inv_ro)
+                        //          *(1 - exp(-gamma_u))/gamma_u*dt;
+
+                        double gamma_lang = fh->gamma[(int)(S*((double)(FHMD_LANGEVIN_LAYERS) - 1e-6))];
+
+                        // Removed: berendsen thermostat, gamma_u dissipator terms
+                        vn = v[n][d]*exp(-gamma_lang*dt) + ((1 - S)*f[n][d]*invmass[n] + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*arr[ind].inv_ro)
+                                 *(exp(-gamma_lang*dt*0.5) - exp(-gamma_lang*dt*1.5))/gamma_lang;
 
                         v[n][d] = vn;
 
-                        xprime[n][d] = x[n][d] + (1 - S)*vn*(1 - exp(-gamma_u))/gamma_u*dt +
-                                           (S*u_fh[d] + S*(1 - S)*grad_ro[d]*arr[ind].inv_ro)*(1 - exp(-gamma_x))/gamma_x*dt;
+                        // xprime[n][d] = x[n][d] + (1 - S)*vn*(1 - exp(-gamma_u))/gamma_u*dt +
+                        //                    (S*u_fh[d] + S*(1 - S)*grad_ro[d]*arr[ind].inv_ro)*(1 - exp(-gamma_x))/gamma_x*dt;
+
+                        // Removed: gamma_u and gamma_x
+                        xprime[n][d] = x[n][d] + ((1 - S)*vn + S*u_fh[d] + S*(1 - S)*grad_ro[d]*arr[ind].inv_ro)*(exp(gamma_lang*dt) - 1)/gamma_lang;
                     }
                 }
             }

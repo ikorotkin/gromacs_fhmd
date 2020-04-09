@@ -105,9 +105,15 @@ typedef struct FHMD
     double      beta;           /* Beta parameter, nm^2/ps or ps^-1 depending on the scheme */
     double      gamma_x;        /* Gamma_x parameter (density fluctuations dissipator), ps^-1 */
     double      gamma_u;        /* Gamma_u parameter (velocity fluctuations dissipator), ps^-1 */
+    double      tau;            /* Langevin-type thermostat parameter, ps^-1 */
     double      eps_rho;        /* Eps_rho parameter for ro_prime FH equation (dissipator factor, 0 <= eps_rho <= 1) */
     double      eps_mom;        /* Eps_mom parameter for m_prime FH equation (dissipator factor, 0 <= eps_mom <= 1) */
     double      S_berendsen;    /* If S_berendsen >= 0, Berendsen thermostat works for S <= S_berendsen, otherwise factor (1-S^(-S_berendsen)) is applied */
+
+    int         T_S_N[FHMD_LANGEVIN_LAYERS];  /* Number of temperature values to be averaged */
+    double      T_S[FHMD_LANGEVIN_LAYERS];    /* Current temperature in the given layer S */
+    double      gamma[FHMD_LANGEVIN_LAYERS];  /* Current gamma parameter for Langevin-type thermostat */
+    double      T_S_1;                        /* Temperature that corresponds to S = 1 for Langevin thermostat, K */
 
     ivec        N, N_md;        /* Number of FH cells along each direction */
     ivec        N_shift;        /* N_shift = (N - N_md)/2 */

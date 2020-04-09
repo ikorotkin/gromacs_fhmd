@@ -113,6 +113,17 @@ void fhmd_print_statistics(FHMD *fh, t_commrec *cr)
 
             printf(RESET_COLOR "\n");
 
+#ifdef FHMD_DEBUG_LANGEVIN
+            printf(MAKE_YELLOW "DEBUG: T(S) = ");
+            for(int i = 0; i < FHMD_LANGEVIN_LAYERS; i++)
+                printf("%g  ", fh->T_S[i]);
+            printf(RESET_COLOR "\n");
+            // printf(MAKE_YELLOW "DEBUG: gamma(S) = ");
+            // for(int i = 0; i < FHMD_LANGEVIN_LAYERS; i++)
+            //     printf("%g  ", fh->gamma[i]);
+            // printf(RESET_COLOR "\n");
+#endif
+
             fflush(stdout);
         }
     }

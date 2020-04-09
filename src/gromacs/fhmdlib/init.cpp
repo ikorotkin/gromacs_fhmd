@@ -34,6 +34,8 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
         fh->beta        = 20;
         fh->gamma_x     = 0;
         fh->gamma_u     = 1;
+        fh->tau         = 0.1;
+        fh->T_S_1       = 298.15;
         fh->eps_rho     = 0.05;
         fh->eps_mom     = 0.05;
         fh->S_berendsen = 1;
@@ -122,8 +124,10 @@ int fhmd_init(matrix box, int N_atoms, real mass[], rvec x[], double dt_md, gmx_
 
         if(fh->scheme == Two_Way)
         {
+            printf("FHMD: Langevin-type thermostat: tau = %g [ps^-1]\n", fh->tau);
             printf("FHMD: MD dissipator: gamma_x = %g [ps^-1], gamma_u = %g [ps^-1]\n", fh->gamma_x, fh->gamma_u);
             printf("FHMD: FH dissipator: eps_rho = %g [--], eps_mom = %g [--]\n", fh->eps_rho, fh->eps_mom);
+            fprintf(fw, "tau     = %g             ; tau parameter (Langevin-type thermostat), ps^-1\n", fh->tau);
             fprintf(fw, "gamma_x = %g             ; Gamma_x parameter (MD density fluctuations dissipator), ps^-1\n", fh->gamma_x);
             fprintf(fw, "gamma_u = %g             ; Gamma_u parameter (MD velocity fluctuations dissipator), ps^-1\n", fh->gamma_u);
             fprintf(fw, "eps_rho = %g             ; Eps_rho parameter (FH density fluctuations dissipator)\n", fh->eps_rho);

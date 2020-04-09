@@ -22,6 +22,11 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms
             arr[i].uro_md_s[d]  = 0;
         }
     }
+    for(int i = 0; i < FHMD_LANGEVIN_LAYERS; i++)
+    {
+        fh->T_S[i] = 0;
+        fh->T_S_N[i] = 0;
+    }
 
     /* Collect statistics */
     for(int n = 0; n < N_atoms; n++)
@@ -55,7 +60,11 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms
         {
             arr[ind].uro_md[d]   += v[n][d]*mass[n];
             arr[ind].uro_md_s[d] += (1 - S)*v[n][d]*mass[n];
+
+            fh->T_S[(int)(S*((double)(FHMD_LANGEVIN_LAYERS) - 1e-6))] += 1.0/FHMD_T_DOF/FHMD_kB*v[n][d]*v[n][d]*mass[n];
         }
+
+        fh->T_S_N[(int)(S*((double)(FHMD_LANGEVIN_LAYERS) - 1e-6))]++;
     }
 
     /* Update statistics */
@@ -93,6 +102,8 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
 
     /* Broadcast linear array */
     gmx_sumd(fh->Ntot*8, fh->mpi_linear, cr);
+    gmx_sumd(FHMD_LANGEVIN_LAYERS, fh->T_S, cr);
+    gmx_sumi(FHMD_LANGEVIN_LAYERS, fh->T_S_N, cr);
 
     /* Unpack linear array */
     for(int i = 0; i < fh->Ntot; i++)
@@ -116,6 +127,22 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
 
     ivec ind;
     dvec alpha_term;
+
+    for(int i = 0; i < FHMD_LANGEVIN_LAYERS; i++)
+    {
+        if(fh->T_S_N[i] > 0)
+        {
+            fh->T_S[i] /= (double)fh->T_S_N[i];
+            double T_ref = fh->FH_temp - (fh->FH_temp - fh->T_S_1)*(double)(i)/(double)(FHMD_LANGEVIN_LAYERS - 1);
+            double lambda = sqrt(1.0 + fh->dt_FH/(double)(fh->FH_step)/fh->tau*(T_ref/fh->T_S[i] - 1.0));
+            fh->gamma[i] = (1.0 - lambda)/fh->dt_FH*(double)(fh->FH_step);
+        }
+        else
+        {
+            fh->T_S[i] = 0;
+            fh->gamma[i] = 1e-10;
+        }
+    }
 
     for(int k = fh->N_shift[2]; k < (fh->N_md[2] + fh->N_shift[2]); k++)
     {
