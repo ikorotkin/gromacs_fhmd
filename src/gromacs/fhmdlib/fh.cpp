@@ -182,8 +182,25 @@ void FH_predictor(FHMD *fh)
     dvec   FP, QP, FS, QS, PG, TAU, TAURAN;
     matrix TAUL, TAUR;
     double BP, BS;
+    double gamma_lang;
 
     compute_random_stress(fh);
+
+    for(int k = 0; k < NZ; k++)
+    {
+        for(int j = 0; j < NY; j++)
+        {
+            for(int i = 0; i < NX; i++)
+            {
+                ASSIGN_IND(ind, i, j, k);
+
+                if(fh->grid.md[C] == FH_zone)
+                {
+                    a[C].ro_md = a[C].ro_fh;
+                }
+            }
+        }
+    }
 
     for(int k = 0; k < NZ; k++)
     {
@@ -204,7 +221,7 @@ void FH_predictor(FHMD *fh)
                             (SR*(1 - SR)*((a[CR].ro_fh - a[CR].ro_md) - (a[C].ro_fh - a[C].ro_md))/HR -
                              SL*(1 - SL)*((a[C].ro_fh - a[C].ro_md) - (a[CL].ro_fh - a[CL].ro_md))/HL)/HC;
 
-                    if(fh->grid.md[C] == boundary) QP[d] = 0;
+                    //if(fh->grid.md[C] == boundary) QP[d] = 0;
 
                     // Mass flux for rho_star
                     FS[d] = (SR*a[R].uf[d][d]*0.5*(a[CR].ro_star + a[C].ro_star) -
@@ -215,7 +232,7 @@ void FH_predictor(FHMD *fh)
                             (SR*(1 - SR)*(a[CR].ro_prime - a[C].ro_prime)/HR -
                              SL*(1 - SL)*(a[C].ro_prime - a[CL].ro_prime)/HL)/HC;
 
-                    if(fh->grid.md[C] == boundary) QS[d] = 0;
+                    //if(fh->grid.md[C] == boundary) QS[d] = 0;
                 }
 
                 // MD source
@@ -274,7 +291,10 @@ void FH_predictor(FHMD *fh)
 
                     if(fh->grid.md[C] == FH_zone) a[C].mn_prime[dim] = 0;
 
-                    double gamma_lang = fh->gamma[(int)(SC*((double)(FHMD_LANGEVIN_LAYERS) - 1e-6))];
+                    if(SC < 1e-6)
+                        gamma_lang = fh->gamma_MD;
+                    else
+                        gamma_lang = fh->gamma[(int)(SC*((double)(FHMD_LANGEVIN_LAYERS) - 1e-6))];
 
                     a[C].mn_star[dim]  = a[C].m_star[dim] + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS - gamma_lang*a[C].uro_md_s[dim]) + a[C].uros_md[dim];
                     a[C].u_fh_n[dim]   = (a[C].mn_star[dim] + a[C].mn_prime[dim])/a[C].ro_fh_n;
@@ -308,6 +328,7 @@ void FH_corrector(FHMD *fh)
     dvec   FP, QP, FS, QS, PG, TAU, TAURAN;
     matrix TAUL, TAUR;
     double BP, BS, MDS;
+    double gamma_lang;
 
     FH_char(fh);
 
@@ -332,6 +353,11 @@ void FH_corrector(FHMD *fh)
 
                     for(int dim = 0; dim < DIM; dim++)
                         a[C].m_prime_b[dim] = 0;
+                }
+
+                if(fh->grid.md[C] == FH_zone)
+                {
+                    a[C].ro_md_prime = a[C].ro_fh;
                 }
             }
         }
@@ -358,7 +384,7 @@ void FH_corrector(FHMD *fh)
 
                     QP[d] += fh->eps_rho*(a[CR].ro_prime - 2.0*a[C].ro_prime + a[CL].ro_prime)/DT;
 
-                    if(fh->grid.md[C] == boundary) QP[d] = 0;
+                    //if(fh->grid.md[C] == boundary) QP[d] = 0;
                 }
 
                 // Mass conservation
@@ -376,7 +402,7 @@ void FH_corrector(FHMD *fh)
 
                         QP[d] = fh->eps_mom*(a[CR].m_prime[dim] - 2.0*a[C].m_prime[dim] + a[CL].m_prime[dim])/DT;
 
-                        if(fh->grid.md[C] == boundary) QP[d] = 0;
+                        //if(fh->grid.md[C] == boundary) QP[d] = 0;
                     }
 
                     // Beta-term for m_prime
@@ -410,7 +436,8 @@ void FH_corrector(FHMD *fh)
                             (SR*(1 - SR)*(a[CR].ronn_prime - a[C].ronn_prime)/HR -
                              SL*(1 - SL)*(a[C].ronn_prime - a[CL].ronn_prime)/HL)/HC;
 
-                    if((fh->grid.md[C] == boundary) || (fh->grid.md[C] == FH_zone)) QS[d] = 0;
+                    //if((fh->grid.md[C] == boundary) || (fh->grid.md[C] == FH_zone)) QS[d] = 0;
+                    if(fh->grid.md[C] == FH_zone) QS[d] = 0;
                 }
 
                 // MD Source
@@ -455,7 +482,10 @@ void FH_corrector(FHMD *fh)
                     // MD Source
                     MDS = (a[C].uro_md_s[dim] - a[C].uropr_md[dim] - a[C].uros_md[dim]);
 
-                    double gamma_lang = fh->gamma[(int)(SC*((double)(FHMD_LANGEVIN_LAYERS) - 1e-6))];
+                    if(SC < 1e-6)
+                        gamma_lang = fh->gamma_MD;
+                    else
+                        gamma_lang = fh->gamma[(int)(SC*((double)(FHMD_LANGEVIN_LAYERS) - 1e-6))];
 
                     // Momentum conservation
                     a[C].m_star[dim] = a[C].mn_star[dim] + 0.5*DT*(-SUM(FS) + SC*a[C].f_fh[dim] + BS - gamma_lang*a[C].uro_md_s[dim]) + MDS;

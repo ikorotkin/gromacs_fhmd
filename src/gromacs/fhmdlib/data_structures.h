@@ -110,6 +110,10 @@ typedef struct FHMD
     double      eps_mom;        /* Eps_mom parameter for m_prime FH equation (dissipator factor, 0 <= eps_mom <= 1) */
     double      S_berendsen;    /* If S_berendsen >= 0, Berendsen thermostat works for S <= S_berendsen, otherwise factor (1-S^(-S_berendsen)) is applied */
 
+    int         T_MD_N;         /* Number of temperature values to be averaged (in MD zone) */
+    double      T_MD;           /* Current temperature in the MD zone */
+    double      gamma_MD;       /* Current gamma parameter for Langevin-type thermostat in pure MD zone */
+
     int         T_S_N[FHMD_LANGEVIN_LAYERS];  /* Number of temperature values to be averaged */
     double      T_S[FHMD_LANGEVIN_LAYERS];    /* Current temperature in the given layer S */
     double      gamma[FHMD_LANGEVIN_LAYERS];  /* Current gamma parameter for Langevin-type thermostat */

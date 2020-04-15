@@ -31,7 +31,7 @@ void fhmd_do_update_md(int start, int nrend,
     int          ind;
     double       invro_dt;
     double       S = fh->S;
-    double       gamma_u, gamma_x;
+    double       gamma_u, gamma_x, gamma_lang;
     int          nbr[8];
     dvec         xi;
     dvec         f_fh, u_fh, alpha_term, beta_term, grad_ro;
@@ -135,7 +135,10 @@ void fhmd_do_update_md(int start, int nrend,
                         // vn = lg*v[n][d]*exp(-gamma_u) + ((1 - S)*f[n][d]*invmass[n] + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*arr[ind].inv_ro)
                         //          *(1 - exp(-gamma_u))/gamma_u*dt;
 
-                        double gamma_lang = fh->gamma[(int)(S*((double)(FHMD_LANGEVIN_LAYERS) - 1e-6))];
+                        if(S < 1e-6)
+                            gamma_lang = fh->gamma_MD;  // gamma for S~=0
+                        else
+                            gamma_lang = fh->gamma[(int)(S*((double)(FHMD_LANGEVIN_LAYERS) - 1e-6))];
 
                         // Removed: berendsen thermostat, gamma_u dissipator terms
                         vn = v[n][d]*exp(-gamma_lang*dt) + ((1 - S)*f[n][d]*invmass[n] + (S*f_fh[d] + alpha_term[d] + S*(1 - S)*beta_term[d])*arr[ind].inv_ro)

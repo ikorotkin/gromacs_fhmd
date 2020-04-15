@@ -27,6 +27,8 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms
         fh->T_S[i] = 0;
         fh->T_S_N[i] = 0;
     }
+    fh->T_MD = 0;
+    fh->T_MD_N = 0;
 
     /* Collect statistics */
     for(int n = 0; n < N_atoms; n++)
@@ -61,10 +63,16 @@ void fhmd_update_MD_in_FH(rvec x[], rvec v[], real mass[], rvec f[], int N_atoms
             arr[ind].uro_md[d]   += v[n][d]*mass[n];
             arr[ind].uro_md_s[d] += (1 - S)*v[n][d]*mass[n];
 
-            fh->T_S[(int)(S*((double)(FHMD_LANGEVIN_LAYERS) - 1e-6))] += 1.0/FHMD_T_DOF/FHMD_kB*v[n][d]*v[n][d]*mass[n];
+            if(S < 1e-6)
+                fh->T_MD += 1.0/FHMD_T_DOF/FHMD_kB*v[n][d]*v[n][d]*mass[n];
+            else
+                fh->T_S[(int)(S*((double)(FHMD_LANGEVIN_LAYERS) - 1e-6))] += 1.0/FHMD_T_DOF/FHMD_kB*v[n][d]*v[n][d]*mass[n];
         }
 
-        fh->T_S_N[(int)(S*((double)(FHMD_LANGEVIN_LAYERS) - 1e-6))]++;
+        if(S < 1e-6)
+            fh->T_MD_N++;
+        else
+            fh->T_S_N[(int)(S*((double)(FHMD_LANGEVIN_LAYERS) - 1e-6))]++;
     }
 
     /* Update statistics */
@@ -104,6 +112,8 @@ void fhmd_sum_arrays(t_commrec *cr, FHMD *fh)
     gmx_sumd(fh->Ntot*8, fh->mpi_linear, cr);
     gmx_sumd(FHMD_LANGEVIN_LAYERS, fh->T_S, cr);
     gmx_sumi(FHMD_LANGEVIN_LAYERS, fh->T_S_N, cr);
+    gmx_sumd(1, &fh->T_MD, cr);
+    gmx_sumi(1, &fh->T_MD_N, cr);
 
     /* Unpack linear array */
     for(int i = 0; i < fh->Ntot; i++)
@@ -143,6 +153,10 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
             fh->gamma[i] = 1e-10;
         }
     }
+
+    fh->T_MD /= (double)fh->T_MD_N;
+    double lambda_MD = sqrt(1.0 + fh->dt_FH/(double)(fh->FH_step)/fh->tau*(fh->FH_temp/fh->T_MD - 1.0));
+    fh->gamma_MD = (1.0 - lambda_MD)/fh->dt_FH*(double)(fh->FH_step);
 
     for(int k = fh->N_shift[2]; k < (fh->N_md[2] + fh->N_shift[2]); k++)
     {
@@ -210,7 +224,7 @@ void fhmd_calculate_MDFH_terms(FHMD *fh)
             {
                 ASSIGN_IND(ind, i, j, k);
 
-                if((fh->scheme == Two_Way) && (fh->grid.md[C] == boundary)) continue;
+                //if((fh->scheme == Two_Way) && (fh->grid.md[C] == boundary)) continue;
 
                 for(int du = 0; du < DIM; du++)
                 {

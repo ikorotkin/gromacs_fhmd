@@ -9,16 +9,16 @@ R2   = 1                ; FH sphere radius for variable S, [0..1]
 Smin = 0                ; Minimum S for variable S
 Smax = 0.5              ; Maximum S for variable S
 
-alpha   = 10            ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps
+alpha   = 100           ; Alpha parameter for dx/dt and du/dt equations, nm^2/ps
 beta    = 50            ; Beta parameter for du/dt equation, ps^-1
 
-tau     = 0.05          ; tau parameter (Langevin-type thermostat), ps^-1
-T_S1    = 100           ; T(S = 1)
+tau     = 0.1           ; tau parameter (Langevin-type thermostat), ps^-1
+T_S1    = 200           ; T(S = 1)
 
 gamma_x = 0             ; Gamma_x parameter (MD density fluctuations dissipator), ps^-1
-gamma_u = 0  ;1         ; Gamma_u parameter (MD velocity fluctuations dissipator), ps^-1
-eps_rho = 0  ;0.05      ; Eps_rho parameter (FH density fluctuations dissipator)
-eps_mom = 0  ;0.05      ; Eps_mom parameter (FH momentum fluctuations dissipator)
+gamma_u = 0             ; Gamma_u parameter (MD velocity fluctuations dissipator), ps^-1
+eps_rho = 0.05          ; Eps_rho parameter (FH density fluctuations dissipator)
+eps_mom = 0 ;0.05          ; Eps_mom parameter (FH momentum fluctuations dissipator)
 
 ; Switched off in the code
 S_berendsen = 1         ; If S_berendsen >= 0, Berendsen thermostat will work for S <= S_berendsen,

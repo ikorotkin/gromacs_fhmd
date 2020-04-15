@@ -40,4 +40,4 @@ gen-vel                  = no
 gen-temp                 = 298.15
 gen-seed                 = 2020
 
-constraints              = none
+constraints              = all-bonds ;none
